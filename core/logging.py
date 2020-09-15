@@ -34,10 +34,18 @@ LOG_CRITICAL = logging.CRITICAL
 LOG_ERROR = logging.ERROR
 LOG_WARNING = logging.WARNING
 LOG_INFO = logging.INFO
+LOG_PROTOCOL = 5
 LOG_DEBUG = logging.DEBUG
 LOG_NOTSET = logging.NOTSET
 
-levels = {'DEBUG': LOG_DEBUG, 'INFO': LOG_INFO, 'WARNING': LOG_WARNING, 'ERROR': LOG_ERROR, 'CRITICAL': LOG_CRITICAL}
+levels = {'DEBUG': LOG_DEBUG, 'PROTOCOL': LOG_PROTOCOL, 'INFO': LOG_INFO, 'WARNING': LOG_WARNING, 'ERROR': LOG_ERROR, 'CRITICAL': LOG_CRITICAL}
+
+def logprotocol(self, message, *args, **kws):
+	if self.isEnabledFor(LOG_PROTOCOL):
+		print('test')
+		self._log(LOG_PROTOCOL, message, args, **kws)
+
+logging.Logger.protocol = logprotocol
 
 root = logging.getLogger(None)
 log = logging.getLogger('relaybot')
@@ -107,8 +115,6 @@ def applyconfig(loop, args):
 
 	for out in confs['outputs']:
 		if out['type'] == 'stdout':
-			if cliargs.debug:
-				continue
 			if not args.nofork:
 				continue
 			loghandler = logging.StreamHandler(sys.stdout)
@@ -130,15 +136,11 @@ def applyconfig(loop, args):
 		loghandler.setFormatter(logformatter)
 		loghandler.setLevel(out['level'])
 		root.addHandler(loghandler)
-		if not cliargs.debug:
-			removedef = True
-
-	if not args.nofork:
 		removedef = True
 
 	if removedef:
 		root.removeHandler(defloghandler)
-		mylog.debug('Found at least one valid logging output, no longer using default output')
+		mylog.debug('Default logging handler no longer needed')
 
 def init_logging(args):
 	global rblog, levels, root, defloghandler, deflogformatter, cliargs
@@ -156,8 +158,8 @@ def init_logging(args):
 	else:
 		defloghandler.setLevel(LOG_INFO)
 
-	root.setLevel(LOG_DEBUG)
-	log.setLevel(LOG_DEBUG)
+	root.setLevel(LOG_NOTSET)
+	log.setLevel(LOG_NOTSET)
 	root.addHandler(defloghandler)
 
 	if args.debug:

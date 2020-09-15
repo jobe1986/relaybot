@@ -83,7 +83,7 @@ def loadconfig(config):
 			log.warning('IRC client ' + name + ' user missing gecos attribute')
 			continue
 		conf['user'] = user
-		
+
 		chans = irccfg.findall('./channel')
 		if not chans:
 			log.warning('IRC client ' + name + ' missing channel configuration')
