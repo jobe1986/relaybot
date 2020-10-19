@@ -81,7 +81,7 @@ def checkoverrides(args):
 			args.nofork = True
 	except Exception as e:
 		log.error('Error checking configuration for debug mode: ' + str(e))
-		
+
 def getattrs(node, log, attrs={}):
 	ret = {}
 
