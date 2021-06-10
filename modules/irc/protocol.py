@@ -34,7 +34,6 @@ class IRCClientProtocol(asyncio.Protocol):
 		self.transport = None
 		self.log = log.getChild(self.config['name'])
 		clients[self.config['name']] = self
-		print('moo')
 
 	def connection_made(self, transport):
 		self.transport = transport
