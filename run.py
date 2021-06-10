@@ -39,6 +39,7 @@ def parse_args():
 	parser.add_argument('-p', '--pidfile', help='Path to process id (pid) file', action='store', default='relaybot.pid', dest='pidfile')
 
 	args = parser.parse_args()
+	args.asynciodebug = False
 
 	if os.name == 'nt':
 		args.nofork = True
@@ -58,7 +59,7 @@ _daemon.daemonize(args)
 
 # Create event loop
 loop = asyncio.get_event_loop()
-if args.debug:
+if args.asynciodebug:
 	loop.set_debug(True)
 
 _signals.init_signals(loop)

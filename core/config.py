@@ -52,13 +52,14 @@ def load(loop, args):
 
 		log.debug('Loading modules')
 		if _modules.loadconfig(config):
-			_modules.applyconfig(loop)
+			loop.call_soon(_modules.applyconfig, loop)
 		else:
 			log.error('Unable to load modules')
 			loop.stop()
 			return
 
 		log.info('Configuration successfully loaded')
+
 		return
 	except Exception as e:
 		log.error('Error parsing configuration: ' + str(e))
@@ -75,6 +76,10 @@ def checkoverrides(args):
 		dbgconf = config.findall('debug')
 		if len(dbgconf) > 0:
 			args.debug = True
+
+		adbgconf = config.findall('asynciodebug')
+		if len(adbgconf) > 0:
+			args.asynciodebug = True
 
 		nfconf = config.findall('nofork')
 		if len(nfconf) > 0:

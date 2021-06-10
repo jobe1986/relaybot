@@ -37,7 +37,7 @@ def loadconfig(config):
 			continue
 
 		name = irccfg.attrib['name']
-		conf = {'server': {}, 'user': {}, 'channels': {}}
+		conf = {'name': name, 'server': {}, 'user': {}, 'channels': {}}
 
 		serv = irccfg.findall('./server')
 		if not serv:
@@ -92,8 +92,18 @@ def loadconfig(config):
 		for chan in chans:
 			continue
 
-		print(str(conf))
+		configs[name] = conf
+		log.debug('Loaded config: ' + str(conf))
 	return
 
 def applyconfig(loop):
+	global configs
+
+	import modules.irc.protocol as _protocol
+
+	for name in configs:
+		conf = configs[name]
+		log.info('Creating IRC client ' + name)
+
+		_protocol.createclient(loop, conf)
 	return

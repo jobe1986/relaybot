@@ -42,7 +42,6 @@ levels = {'DEBUG': LOG_DEBUG, 'PROTOCOL': LOG_PROTOCOL, 'INFO': LOG_INFO, 'WARNI
 
 def logprotocol(self, message, *args, **kws):
 	if self.isEnabledFor(LOG_PROTOCOL):
-		print('test')
 		self._log(LOG_PROTOCOL, message, args, **kws)
 
 logging.Logger.protocol = logprotocol
