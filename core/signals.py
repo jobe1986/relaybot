@@ -31,10 +31,10 @@ def handle_sigint(loop):
 
 def handle_sighup(loop):
 	log.info('Received signal SIGHUP')
-	
+
 def handle_sigusr1(loop):
 	log.info('Received signal SIGUSR1')
-	
+
 def handle_sigusr2(loop):
 	log.info('Received signal SIGUSR2')
 

@@ -63,7 +63,7 @@ def daemonize(args):
 			sys.exit(1)
 
 		log.debug('Successfully forked into the background')
-		
+
 		sys.stdout.flush()
 		sys.stderr.flush()
 		si = open(os.devnull, 'r')
