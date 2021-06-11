@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<config>
+	<debug />
+	<nofork />
+
+	<!-- TODO: Add example config -->
+</config>
