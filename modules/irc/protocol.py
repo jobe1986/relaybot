@@ -40,7 +40,8 @@ class IRCClientProtocol(asyncio.Protocol):
 		self.handlers = {
 			'005': self.m_005,
 			'CAP': self.m_cap,
-			'PING': self.m_ping
+			'PING': self.m_ping,
+			'PRIVMSG': self.m_privmsg
 		}
 
 		self.caps = {
@@ -142,9 +143,6 @@ class IRCClientProtocol(asyncio.Protocol):
 
 		self.hasperformed = True
 
-	def m_ping(self, msg):
-		self._send('PONG', msg['params'][0])
-
 	def m_cap(self, msg):
 		if msg['params'][1] == 'LS':
 			if self.capendhandle is not None:
@@ -164,6 +162,22 @@ class IRCClientProtocol(asyncio.Protocol):
 			for cap in caps:
 				if cap in self.caps:
 					self.caps[cap] = True
+
+	def m_ping(self, msg):
+		self._send('PONG', msg['params'][0])
+
+	def m_privmsg(self, msg):
+		text = msg['params'][-1]
+		if len(text) > 0:
+			if text[0] == '\x01':
+				text = text[1:]
+				if len(text) > 0:
+					if text[-1] == '\x01':
+						text = text[:-1]
+				if len(text) > 0:
+					words = text.split(' ')
+					if words[0].upper() == 'VERSION':
+						self._send('NOTICE', msg['source']['name'], '\x01VERSION RelayBot 2.0 https://github.com/jobe1986/relaybot\x01')
 
 	def _capend(self):
 		self._send('CAP', 'END')
