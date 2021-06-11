@@ -90,7 +90,12 @@ def loadconfig(config):
 			continue
 
 		for chan in chans:
-			continue
+			chana = chan.attrib
+			if not 'name' in chana:
+				log.warning('Channel for IRC client ' + name + ' missing name attribute')
+				continue
+			name = chana['name'].lower()
+			conf['channels'][name] = chana
 
 		configs[name] = conf
 		log.debug('Loaded config: ' + str(conf))
