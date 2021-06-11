@@ -44,7 +44,13 @@ def logprotocol(self, message, *args, **kws):
 	if self.isEnabledFor(LOG_PROTOCOL):
 		self._log(LOG_PROTOCOL, message, args, **kws)
 
+def getchildobj(self, suffix):
+	if self.root is not self:
+		suffix = '#'.join((self.name, suffix))
+	return self.manager.getLogger(suffix)
+
 logging.Logger.protocol = logprotocol
+logging.Logger.getChildObj = getchildobj
 
 root = logging.getLogger(None)
 log = logging.getLogger('relaybot')

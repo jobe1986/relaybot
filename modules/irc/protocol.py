@@ -32,7 +32,7 @@ class IRCClientProtocol(asyncio.Protocol):
 		self.loop = loop
 		self.config = config
 		self.transport = None
-		self.log = log.getChild(self.config['name'])
+		self.log = log.getChildObj(self.config['name'])
 		clients[self.config['name']] = self
 
 	def connection_made(self, transport):
@@ -61,7 +61,21 @@ class IRCClientProtocol(asyncio.Protocol):
 				self.log.protocol('Received line: ' + line)
 		return
 
+async def connectclient(loop, conf):
+	try:
+		serv = '[' + conf['server']['host'] + ']:'
+		if conf['server']['tls']:
+			serv = serv + '+'
+		serv = serv + str(conf['server']['port'])
+		log.info('Connecting client ' + conf['name'] + ' to ' + serv)
+		await loop.create_connection(lambda: IRCClientProtocol(loop, conf), conf['server']['host'], conf['server']['port'], ssl=conf['server']['tls'])
+	except Exception as e:
+		log.warning('Exception occurred attempting to connect client ' + conf['name'] + ': ' + str(e))
+		log.info('Reconnecting in 30 seconds')
+		loop.call_later(10, createclient, loop, conf)
+
+		log.debug('Stopping here for log review')
+		loop.stop()
+
 def createclient(loop, conf):
-	log.info('Connecting to client ' + conf['name'])
-	coro = loop.create_connection(lambda: IRCClientProtocol(loop, conf), conf['server']['host'], conf['server']['port'], ssl=conf['server']['tls'])
-	loop.create_task(coro)
+	loop.create_task(connectclient(loop, conf))
