@@ -128,6 +128,12 @@ def applyconfig(loop, args):
 				continue
 			loghandler = logging.StreamHandler(sys.stderr)
 		elif out['type'] == 'file':
+			dir = os.path.dirname(out['path'])
+			if not os.path.exists(dir):
+				try:
+					os.makedirs(dir, 0o700)
+				except Exception as ex:
+					log.error('Unable to create log directory "' + dir + '": ' + str(ex))
 			if out['rollover'] == None:
 				loghandler = logging.FileHandler(out['path'])
 			elif out['rollover'] == 'midnight':

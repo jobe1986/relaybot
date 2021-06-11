@@ -34,12 +34,23 @@ class IRCClientProtocol(asyncio.Protocol):
 		self.transport = None
 		self.log = log.getChildObj(self.config['name'])
 
+		self.isshutdown = False
 		self.hasperformed = False
+		self.errormsg = None
 		self.capendhandle = None
+		
+		self.chans = config['channels']
+		self.user = config['user']
 
 		self.handlers = {
 			'005': self.m_005,
+			'433': self.m_433,
 			'CAP': self.m_cap,
+			'ERROR': self.m_error,
+			'JOIN': self.m_join,
+			'KICK': self.m_kick,
+			'NICK': self.m_nick,
+			'PART': self.m_part,
 			'PING': self.m_ping,
 			'PRIVMSG': self.m_privmsg
 		}
@@ -66,8 +77,19 @@ class IRCClientProtocol(asyncio.Protocol):
 
 	def connection_lost(self, exc):
 		global clients
-		self.log.info('Lost connection: ' + str(exc))
+		if not exc is None:
+			self.log.info('Lost connection: ' + str(exc))
+		elif not self.errormsg is None:
+			self.log.info('Lost connection: ' + self.errormsg)
+		else:
+			self.log.info('Lost connection: ' + str(exc))
 		del clients[self.config['name']]
+		
+		if self.capendhandle is not None:
+			self.capendhandle.cancel()
+
+		if self.isshutdown:
+			return
 
 		self.log.info('Reconnecting in 30 seconds')
 		self.loop.call_later(30, createclient, self.loop, self.config)
@@ -90,14 +112,21 @@ class IRCClientProtocol(asyncio.Protocol):
 					self.handlers[msg['msg']](msg)
 		return
 
+	def shutdown(self, loop):
+		self.isshutdown = True
+		self._send('QUIT', 'Shutting down')
+		self.transport.close()
+
 	def m_005(self, msg):
 		if self.hasperformed:
 			return
 
 		chans = []
 		chank = {}
-		for chan in self.config['channels']:
-			chan = self.config['channels'][chan]
+		for chan in self.chans:
+			self.chans[chan]['joined'] = False
+			chan = self.chans[chan]
+			
 			if 'key' in chan:
 				chank[chan['name']] = chan['key']
 			else:
@@ -143,6 +172,15 @@ class IRCClientProtocol(asyncio.Protocol):
 
 		self.hasperformed = True
 
+	def m_433(self, msg):
+		if msg['params'][0] == '*' or msg['params'][0].lower() == self.user['nick'].lower():
+			if not 'inc' in self.user:
+				self.user['inc'] = 0
+			else:
+				self.user['inc'] += 1
+			self.user['nick'] = self.config['user']['nick'] + ('%04d' % self.user['inc'])
+			self._send('NICK', self.user['nick'])
+
 	def m_cap(self, msg):
 		if msg['params'][1] == 'LS':
 			if self.capendhandle is not None:
@@ -163,6 +201,49 @@ class IRCClientProtocol(asyncio.Protocol):
 				if cap in self.caps:
 					self.caps[cap] = True
 
+	def m_error(self, msg):
+		self.errormsg = msg['params'][-1]
+		self.log.error('Received error: ' + self.errormsg)
+
+	def m_join(self, msg):
+		chan = msg['params'][0].lower()
+		who = msg['source']['name'].lower()
+
+		if who == self.user['nick'].lower():
+			if chan in self.chans:
+				log.info('Joined channel ' + self.chans[chan]['name'])
+				self.chans[chan]['joined'] = True
+
+	def m_kick(self, msg):
+		chan = msg['params'][0].lower()
+		victim = msg['params'][1].lower()
+
+		if victim == self.user['nick'].lower():
+			if chan in self.chans:
+				log.info('Kicked from channel channel ' + self.chans[chan]['name'])
+				self.chans[chan]['joined'] = False
+
+	def m_nick(self, msg):
+		who = msg['source']['name'].lower()
+		newnick = msg['params'][0]
+
+		if who == self.user['nick'].lower():
+			self.user['nick'] = newnick
+			log.info('Changed nick to ' + newnick)
+
+	def m_part(self, msg):
+		chan = msg['params'][0].lower()
+		who = msg['source']['name'].lower()
+
+		if who == self.user['nick'].lower():
+			if chan in self.chans:
+				log.info('Parted channel ' + self.chans[chan]['name'])
+				self.chans[chan]['joined'] = False
+				if 'key' in self.chans[chan]:
+					self._send('JOIN', self.chans[chan]['name'], self.chans[chan]['key'])
+				else:
+					self._send('JOIN', self.chans[chan]['name'])
+
 	def m_ping(self, msg):
 		self._send('PONG', msg['params'][0])
 
@@ -181,6 +262,7 @@ class IRCClientProtocol(asyncio.Protocol):
 
 	def _capend(self):
 		self._send('CAP', 'END')
+		self.capendhandle = None
 
 	def _send(self, msg, *params, **kwargs):
 		line = msg

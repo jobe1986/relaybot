@@ -112,3 +112,9 @@ def applyconfig(loop):
 
 		_protocol.createclient(loop, conf)
 	return
+
+def shutdown(loop):
+	import modules.irc.protocol as _protocol
+	
+	for cli in _protocol.clients:
+		_protocol.clients[cli].shutdown(loop)
