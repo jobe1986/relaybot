@@ -74,8 +74,5 @@ async def connectclient(loop, conf):
 		log.info('Reconnecting in 30 seconds')
 		loop.call_later(10, createclient, loop, conf)
 
-		log.debug('Stopping here for log review')
-		loop.stop()
-
 def createclient(loop, conf):
 	loop.create_task(connectclient(loop, conf))
