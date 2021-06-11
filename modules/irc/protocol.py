@@ -38,9 +38,10 @@ class IRCClientProtocol(asyncio.Protocol):
 		self.hasperformed = False
 		self.errormsg = None
 		self.capendhandle = None
-		
+
 		self.chans = config['channels']
 		self.user = config['user']
+		self.user['newnick'] = self.user['nick']
 
 		self.handlers = {
 			'005': self.m_005,
@@ -84,7 +85,7 @@ class IRCClientProtocol(asyncio.Protocol):
 		else:
 			self.log.info('Lost connection: ' + str(exc))
 		del clients[self.config['name']]
-		
+
 		if self.capendhandle is not None:
 			self.capendhandle.cancel()
 
@@ -126,7 +127,7 @@ class IRCClientProtocol(asyncio.Protocol):
 		for chan in self.chans:
 			self.chans[chan]['joined'] = False
 			chan = self.chans[chan]
-			
+
 			if 'key' in chan:
 				chank[chan['name']] = chan['key']
 			else:
@@ -173,13 +174,15 @@ class IRCClientProtocol(asyncio.Protocol):
 		self.hasperformed = True
 
 	def m_433(self, msg):
-		if msg['params'][0] == '*' or msg['params'][0].lower() == self.user['nick'].lower():
+		targ = msg['params'][0]
+		newnick = msg['params'][1]
+		if targ == '*' or targ.lower() == self.user['nick'].lower() or newnick.lower() == self.user['newnick'].lower():
 			if not 'inc' in self.user:
 				self.user['inc'] = 0
 			else:
 				self.user['inc'] += 1
-			self.user['nick'] = self.config['user']['nick'] + ('%04d' % self.user['inc'])
-			self._send('NICK', self.user['nick'])
+			self.user['newnick'] = self.config['user']['nick'] + ('%04d' % self.user['inc'])
+			self._send('NICK', self.user['newnick'])
 
 	def m_cap(self, msg):
 		if msg['params'][1] == 'LS':
@@ -229,6 +232,7 @@ class IRCClientProtocol(asyncio.Protocol):
 
 		if who == self.user['nick'].lower():
 			self.user['nick'] = newnick
+			self.user['newnick'] = newnick
 			log.info('Changed nick to ' + newnick)
 
 	def m_part(self, msg):
@@ -274,9 +278,8 @@ class IRCClientProtocol(asyncio.Protocol):
 			if len(param) <= 0:
 				continue
 			line += ' '
-			if ' ' in param:
-				if param[0] != ':':
-					line += ':'
+			if ' ' in param or param[0] == ':':
+				line += ':'
 			line += param
 
 		self.transport.write((line + '\r\n').encode('utf-8'))
