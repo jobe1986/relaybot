@@ -94,8 +94,15 @@ def loadconfig(config):
 			if not 'name' in chana:
 				log.warning('Channel for IRC client ' + name + ' missing name attribute')
 				continue
-			cname = chana['name'].lower()
-			conf['channels'][cname] = chana
+			cname = chana['name']
+			if cname.lower() in conf['channels']:
+				log.warning('Channel ' + cname + ' for IRC client ' + name + ' already exists')
+				continue
+			if 'key' in chana:
+				if ' ' in chana['key']:
+					log.warning('Channel ' + cname + ' for IRC client ' + name + ' cannot contain a space, skipping channel')
+					continue
+			conf['channels'][cname.lower()] = chana
 
 		configs[name] = conf
 		log.debug('Loaded config: ' + str(conf))
