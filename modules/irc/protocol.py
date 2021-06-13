@@ -83,8 +83,9 @@ class IRCClientProtocol(asyncio.Protocol):
 		elif not self.errormsg is None:
 			self.log.info('Lost connection: ' + self.errormsg)
 		else:
-			self.log.info('Lost connection: ' + str(exc))
-		del clients[self.config['name']]
+			self.log.info('Lost connection')
+		if self.config['name'] in clients:
+			del clients[self.config['name']]
 
 		if self.capendhandle is not None:
 			self.capendhandle.cancel()
