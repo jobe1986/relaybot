@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# RelayBot - Simple VNC Relay Service, irc.py
+# RelayBot - Simple VNC Relay Service, modules/irc/__init__.py
 #
 # Copyright (C) 2016 Matthew Beeching
 #
