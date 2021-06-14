@@ -36,7 +36,7 @@ class MCUDPProtocol(asyncio.Protocol):
 
 		self.isshutdown = False
 
-		self.logre = re.compile('^\[(?P<time>[^\]]+)\] \[(?P<thread>[^/]+)/(?P<level>[^\]]+)\]: (?P<message>[^\\r\\n]+)$')
+		self.logre = re.compile('^\[(?P<time>[^\]]+)\] \[(?P<thread>[^\]]+?)/(?P<level>[A-Z]+)\]: (?P<message>[^\\r\\n]+)$')
 
 		clients[self.config['name']] = self
 

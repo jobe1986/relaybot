@@ -37,42 +37,39 @@ def loadconfig(config):
 			continue
 
 		name = mccfg.attrib['name']
-		conf = {'name': name, 'rcon': {}, 'udp': {}}
-
+		conf = {'name': name, 'rcon': None, 'udp': None}
 
 		rcon = mccfg.findall('./rcon')
-		if not rcon:
-			log.warning('Minecraft client ' + name + ' missing rcon configuration')
-			continue
-		rcon = rcon[0].attrib
+		if rcon:
+			rcon = rcon[0].attrib
 
-		if not 'host' in rcon:
-			log.warning('Minecraft client ' + name + ' rcon configuration missing host attribute')
-			continue
-		if not 'port' in rcon:
-			log.warning('Minecraft client ' + name + ' rcon configuration missing port attribute')
-			continue
-		if not 'password' in rcon:
-			log.warning('Minecraft client ' + name + ' rcon configuration missing password attribute')
-			continue
+			if not 'host' in rcon:
+				log.warning('Minecraft client ' + name + ' rcon configuration missing host attribute')
+				continue
+			if not 'port' in rcon:
+				log.warning('Minecraft client ' + name + ' rcon configuration missing port attribute')
+				continue
+			if not 'password' in rcon:
+				log.warning('Minecraft client ' + name + ' rcon configuration missing password attribute')
+				continue
 
-		conf['rcon'] = rcon
-
+			conf['rcon'] = rcon
 
 		udp = mccfg.findall('./udp')
-		if not udp:
-			log.warning('Minecraft client ' + name + ' missing UDP configuration')
+		if udp:
+			udp = udp[0].attrib
+
+			if not 'host' in udp:
+				udp['host'] = '0.0.0.0'
+			if not 'port' in udp:
+				log.warning('Minecraft client ' + name + ' UDP configuration missing port attribute')
+				continue
+
+			conf['udp'] = udp
+
+		if not conf['rcon'] and not conf['udp']:
+			log.warning('Minecraft client ' + name + ' requires at least an rcon or udp configuration')
 			continue
-		udp = udp[0].attrib
-
-		if not 'host' in udp:
-			udp['host'] = '0.0.0.0'
-		if not 'port' in udp:
-			log.warning('Minecraft client ' + name + ' UDP configuration missing port attribute')
-			continue
-
-		conf['udp'] = udp
-
 
 		configs[name] = conf
 		log.debug('Loaded config: ' + str(conf))
@@ -87,7 +84,8 @@ def applyconfig(loop):
 		conf = configs[name]
 		log.info('Creating Minecraft client ' + name)
 
-		_udpprotocol.createclient(loop, conf)
+		if conf['udp'] is not None:
+			_udpprotocol.createclient(loop, conf)
 	return
 
 def shutdown(loop):
