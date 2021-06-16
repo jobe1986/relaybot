@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# RelayBot - Simple VNC Relay Service, modules/minecraft/udpprotocol.py
+# RelayBot - Simple VNC Relay Service, modules/minecraft/rconprotocol.py
 #
 # Copyright (C) 2016 Matthew Beeching
 #
@@ -20,73 +20,85 @@
 # along with RelayBot.  If not, see <http://www.gnu.org/licenses/>.
 
 import core.logging as _logging
-import asyncio, re
+import asyncio, binascii, struct
 
 log = _logging.log.getChild(__name__)
 
 clients = {}
 
-class MCUDPProtocol(asyncio.Protocol):
+class MCRConProtocol(asyncio.Protocol):
 	def __init__(self, loop, config):
 		global clients
 		self.loop = loop
 		self.config = config
 		self.transport = None
 		self.log = log.getChildObj(self.config['name'])
+		self.id = 0
 
 		self.isshutdown = False
-
-		self.logre = re.compile('^\[(?P<time>[^\]]+)\] \[(?P<thread>[^\]]+?)/(?P<level>[A-Z]+)\]: (?P<message>[^\\r\\n]+)$')
 
 		clients[self.config['name']] = self
 
 	def connection_made(self, transport):
 		self.transport = transport
+		self.log.debug('Connected to RCON, sending login')
+		self._sendcmd(self.config['rcon']['password'], 3)
 
 	def connection_lost(self, exc):
 		global clients
-
 		if not exc is None:
-			self.log.info('Lost UDP connection: ' + str(exc))
+			self.log.info('Lost connection: ' + str(exc))
 		else:
-			self.log.info('Lost UDP connection')
+			self.log.info('Lost connection')
 		if self.config['name'] in clients:
 			del clients[self.config['name']]
 
 		if self.isshutdown:
 			return
 
-		self.log.info('Retrying in 30 seconds')
+		self.log.info('Reconnecting in 30 seconds')
 		self.loop.call_later(30, createclient, self.loop, self.config)
+		return
 
-	def error_received(self, ex):
-		self.log.debug('Error received: ' + str(ex))
+	def eof_received(self):
+		self.log.debug('EOF received')
+		return
 
-	def datagram_received(self, data, addr):
-		lines = data.decode('utf-8').replace('\r', '\n').split('\n')
-		for line in lines:
-			if len(line) <= 0:
-				continue
-			self.log.protocol('Received UDP message from ' + str(addr) + ': ' + line)
-			match = self.logre.match(line)
-			if match:
-				self.log.protocol('Parsed UDP message: ' + str(match.groupdict()))
-			else:
-				self.log.warning('Unable to parse UDP message')
+	def data_received(self, data):
+		self.log.protocol('Received RCON packet: ' + binascii.hexlify(data).decode('utf-8'))
+		return
 
 	def shutdown(self, loop):
 		self.isshutdown = True
-		self.log.info('Shutting down UDP listener on ' + self.config['udp']['host'] + ']:' + self.config['udp']['port'])
 		self.transport.close()
+
+	def _sendcmd(self, cmd, type=2):
+		rid = self.id
+		pkt = self._rconpacket(self.id, type, cmd)
+		self.id += 1
+		self.log.protocol('Sending RCON packet: ' + binascii.hexlify(pkt).decode('utf-8'))
+		self.transport.write(pkt)
+		return rid
+
+	def _rconpacket(self, id=0, type=0, payload=None):
+		pkt = struct.pack('<ii', id, type)
+		if payload != None:
+			pkt += payload.encode('utf-8')
+		else:
+			payload = ''
+		pkt += b'\x00\x00'
+
+		pkt = struct.pack('<i', len(pkt)) + pkt
+
+		return pkt
 
 async def connectclient(loop, conf):
 	try:
-		serv = '[' + conf['udp']['host'] + ']:' + conf['udp']['port']
-		log.info('Creating UDP listener ' + conf['name'] + ' listening on ' + serv)
-		await loop.create_datagram_endpoint(lambda: MCUDPProtocol(loop, conf), (conf['udp']['host'], conf['udp']['port']), reuse_address=True, reuse_port=True)
+		log.info('Connecting RCON client ' + conf['name'] + ' to ' + '[' + conf['rcon']['host'] + ']:' + conf['rcon']['port'])
+		await loop.create_connection(lambda: MCRConProtocol(loop, conf), conf['rcon']['host'], conf['rcon']['port'])
 	except Exception as e:
-		log.warning('Exception occurred attempting to create UDP listener ' + conf['name'] + ': ' + str(e))
-		log.info('Retrying in 30 seconds')
+		log.warning('Exception occurred attempting to connect RCON client ' + conf['name'] + ': ' + str(e))
+		log.info('Reconnecting in 30 seconds')
 		loop.call_later(10, createclient, loop, conf)
 	return
 

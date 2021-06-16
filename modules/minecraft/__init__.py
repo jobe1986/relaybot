@@ -79,6 +79,7 @@ def applyconfig(loop):
 	global configs
 
 	import modules.minecraft.udpprotocol as _udpprotocol
+	import modules.minecraft.rconprotocol as _rconprotocol
 
 	for name in configs:
 		conf = configs[name]
@@ -86,10 +87,16 @@ def applyconfig(loop):
 
 		if conf['udp'] is not None:
 			_udpprotocol.createclient(loop, conf)
+		if conf['rcon'] is not None:
+			_rconprotocol.createclient(loop, conf)
 	return
 
 def shutdown(loop):
 	import modules.minecraft.udpprotocol as _udpprotocol
+	import modules.minecraft.rconprotocol as _rconprotocol
 
 	for cli in _udpprotocol.clients:
 		_udpprotocol.clients[cli].shutdown(loop)
+
+	for cli in _rconprotocol.clients:
+		_rconprotocol.clients[cli].shutdown(loop)
