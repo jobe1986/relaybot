@@ -79,6 +79,8 @@ class MCRConProtocol(asyncio.Protocol):
 			self.rconcallbacks[pkt['id']](pkt)
 			del self.rconcallbacks[pkt['id']]
 
+		# TODO: handle payload fragmentation (4096 max size payload)
+
 	def shutdown(self, loop):
 		self.isshutdown = True
 		self.transport.close()

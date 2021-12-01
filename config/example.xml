@@ -1,7 +1,87 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <config>
-	<debug />
-	<nofork />
+	<!--
+		Runtime options:
+			debug: enables debug logging
+			nofork: prevents the bot forking into the background
+	-->
+	<!-- <debug /> -->
+	<!-- <nofork /> -->
 
-	<!-- TODO: Add example config -->
+	<!--
+		Modules config:
+		Loads the named modules.
+
+		Currently only the irc and minecraft modules exist	
+	-->
+	<module name="irc" />
+	<module name="minecraft" />
+
+	<!--
+		Logging config:
+		Specifies the logging output configuration.
+
+		Each <output> block must have a 'type' attribute which must be one of 'stdout',
+		'stderr' or 'file'.
+
+		If the 'type' attribute is 'file' then the 'path' attribute must be specified
+		as the path a file in which to output log data to. All directories leading to
+		the final file name must already exist.
+
+		The optional 'rollover' attribute is only used if the 'type' attribute is 'file'
+		In which case the 'rollover' attribute must be either 'midnight' (to have the
+		log file roll over at midnight) or a number of bytes (to have the log file roll
+		over when it reaches the number of bytes specified in size)
+
+		Each <output> block can also have a 'level' attribute which must be one of
+		'DEBUG', 'PROTOCOL', 'INFO', 'WARNING', 'ERROR' or 'CRITICAL'. If not specified
+		then the level 'INFO' is assumed.
+	-->
+	<logging>
+		<output type="stdout" level="DEBUG"/>
+		<output type="file" path="logs/relaybot.log" rollover="midnight" level="DEBUG"/>
+	</logging>
+
+	<!--
+		IRC module config:
+	-->
+	<irc name="IRCNetwork">
+		<server host="irc.server.tld" port="6697" tls="true" password="" />
+		<user nick="RelayBot" user="RelayBot" gecos="Simple Relay Bot" />
+		<channel name="#minecraft" />
+	</irc>
+
+	<!--
+		Minecraft module config:
+	-->
+	<minecraft name="Minecraft">
+		<!--
+			This module requires your minecraft server have rcon enabled.
+
+			To enable rcon in your minecraft server you will need these parameters in
+			server.properties:
+			enable-rcon=true
+			rcon.port=25575
+			rcon.password=password
+			broadcast-rcon-to-ops=false
+		-->
+		<rcon host="127.0.0.1" port="25575" password="password" />
+		<!--
+			This module requires your minecraft server to be configured to relay log
+			messages to this bot via UDP using the log4j2 PatternLayout pattern:
+			"[%d{HH:mm:ss}] [%t/%level]: %msg%n"
+
+			An example of this message format is:
+			"[21:54:20] [Server thread/INFO]: Jobe joined the game"
+
+			To configure your minecraft server to do this first edit the supplied log4j2.xml
+			and change the IP and port in the <Socket> block to match the IP and port
+			of the <udp> block here.
+
+			Then you must make sure to use the command line flag
+			"-Dlog4j.configurationFile=/path/to/log4j2.xml" every time you run your minecraft
+			server. (Don't forget to change the path to log4j2.xml)
+		-->
+		<udp host="127.0.0.1" port="25605" />
+	</minecraft>
 </config>
