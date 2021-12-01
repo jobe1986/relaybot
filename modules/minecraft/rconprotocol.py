@@ -20,7 +20,7 @@
 # along with RelayBot.  If not, see <http://www.gnu.org/licenses/>.
 
 import core.logging as _logging
-import asyncio, binascii, struct
+import asyncio, binascii, re, struct
 
 log = _logging.log.getChild(__name__)
 
@@ -34,6 +34,14 @@ class MCRConProtocol(asyncio.Protocol):
 		self.transport = None
 		self.log = log.getChildObj(self.config['name'])
 		self.id = 0
+		
+		self.rconcallbacks = {}
+		self.rconcallbacks[-1] = self._rcon_login_failure;
+		
+		self.listre = {
+			'main': re.compile('^There are \d+ of a max of \d+ players online: (?P<list>.*?)$'),
+			'player': re.compile('^(?P<name>.+?) \\((?P<uuid>[-a-f0-9]+?)\\)$')
+			}
 
 		self.isshutdown = False
 
@@ -42,7 +50,7 @@ class MCRConProtocol(asyncio.Protocol):
 	def connection_made(self, transport):
 		self.transport = transport
 		self.log.debug('Connected to RCON, sending login')
-		self._sendcmd(self.config['rcon']['password'], 3)
+		self._sendcmd(self.config['rcon']['password'], type=3, callback=self._rcon_login_callback)
 
 	def connection_lost(self, exc):
 		global clients
@@ -58,23 +66,62 @@ class MCRConProtocol(asyncio.Protocol):
 
 		self.log.info('Reconnecting in 30 seconds')
 		self.loop.call_later(30, createclient, self.loop, self.config)
-		return
 
 	def eof_received(self):
 		self.log.debug('EOF received')
-		return
 
 	def data_received(self, data):
 		self.log.protocol('Received RCON packet: ' + binascii.hexlify(data).decode('utf-8'))
-		return
+		pkt = self._rcondecode(data)
+		self.log.protocol('Parsed RCON packet: ' + str(pkt))
+
+		if pkt['id'] in self.rconcallbacks:
+			self.rconcallbacks[pkt['id']](pkt)
+			del self.rconcallbacks[pkt['id']]
 
 	def shutdown(self, loop):
 		self.isshutdown = True
 		self.transport.close()
 
-	def _sendcmd(self, cmd, type=2):
+	def _rcon_login_callback(self, pkt):
+		if pkt['type'] != 2:
+			return
+		del self.rconcallbacks[-1]
+		self.log.info('RCON login successful')
+		self._sendcmd('list uuids', callback=self._rcon_list_uuids)
+
+	def _rcon_login_failure(self, pkt):
+		if pkt['type'] != 2:
+			return
+		self.log.warning('RCON login failed, password incorrect?')
+		self.log.info('Reconnecting in 30 seconds')
+		self.loop.call_later(30, createclient, self.loop, self.config)
+
+	def _rcon_list_uuids(self, pkt):
+		payload = pkt['payload'].decode('utf-8')
+		match = self.listre['main'].match(payload)
+		if match:
+			players = match.group('list')
+			for player in players.split(', '):
+				matchp = self.listre['player'].match(player)
+				if matchp:
+					puuid = {'name': matchp.group('name'), 'uuid': matchp.group('uuid')}
+					pip = {'name': matchp.group('name'), 'ip': '0.0.0.0', 'port': '0'}
+					pcon = {'name': matchp.group('name')}
+					self.log.debug('Event "USER_UUID": ' + str(puuid))
+					self.log.debug('Event "USER_IP": ' + str(pip))
+					self.log.debug('Event "USER_CONNECT": ' + str(pcon))
+					#relay events here
+		return
+
+	def _resetid(self):
+		self.id = 0
+
+	def _sendcmd(self, cmd, type=2, callback=None):
 		rid = self.id
 		pkt = self._rconpacket(self.id, type, cmd)
+		if callback is not None:
+			self.rconcallbacks[self.id] = callback
 		self.id += 1
 		self.log.protocol('Sending RCON packet: ' + binascii.hexlify(pkt).decode('utf-8'))
 		self.transport.write(pkt)
@@ -90,6 +137,17 @@ class MCRConProtocol(asyncio.Protocol):
 
 		pkt = struct.pack('<i', len(pkt)) + pkt
 
+		return pkt
+
+	def _rcondecode(self, raw):
+		pkt = {'id': -1, 'type': -1, 'payload': 'ERROR'}
+		
+		try:
+			(length,) = struct.unpack('<i', raw[:4])
+			fmt = '<ii%ds2s' % (length-10)
+			(pkt['id'], pkt['type'], pkt['payload'], pad,) = struct.unpack(fmt, raw[4:])
+		except Exception as e:
+			self.log.warning('Exception unpacking RCON packet: ' + str(e))
 		return pkt
 
 async def connectclient(loop, conf):
