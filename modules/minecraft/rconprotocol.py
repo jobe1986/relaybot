@@ -34,10 +34,10 @@ class MCRConProtocol(asyncio.Protocol):
 		self.transport = None
 		self.log = log.getChildObj(self.config['name'])
 		self.id = 0
-		
+
 		self.rconcallbacks = {}
 		self.rconcallbacks[-1] = self._rcon_login_failure;
-		
+
 		self.listre = {
 			'main': re.compile('^There are \d+ of a max of \d+ players online: (?P<list>.*?)$'),
 			'player': re.compile('^(?P<name>.+?) \\((?P<uuid>[-a-f0-9]+?)\\)$')
@@ -110,9 +110,9 @@ class MCRConProtocol(asyncio.Protocol):
 					puuid = {'name': matchp.group('name'), 'uuid': matchp.group('uuid')}
 					pip = {'name': matchp.group('name'), 'ip': '0.0.0.0', 'port': '0'}
 					pcon = {'name': matchp.group('name')}
-					self.log.debug('Event "USER_UUID": ' + str(puuid))
-					self.log.debug('Event "USER_IP": ' + str(pip))
-					self.log.debug('Event "USER_CONNECT": ' + str(pcon))
+					self.log.debug('Event "PLAYER_UUID": ' + str(puuid))
+					self.log.debug('Event "PLAYER_IP": ' + str(pip))
+					self.log.debug('Event "PLAYER_CONNECT": ' + str(pcon))
 					#relay events here
 		return
 

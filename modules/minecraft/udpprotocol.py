@@ -39,10 +39,10 @@ class MCUDPProtocol(asyncio.Protocol):
 		self.logre = re.compile('^\[(?P<time>[^\]]+)\] \[(?P<thread>[^\]]+?)(?: #[0-9]+)?/(?P<level>[A-Z]+)\]: (?P<message>[^\\r\\n]+)$')
 		self.msgre = {
 			'Server thread': {
-				'USER_IP': [re.compile('^(?P<name>.+?)\\[/(?P<ip>.+?):(?P<port>[0-9]+?)\\] logged in with entity id.*?$')],
-				'USER_CONNECT': [re.compile('^(?P<name>.+?) (?:\\(formerly known as .+?\\) )?joined the game$')],
-				'USER_DISCONNECT': [re.compile('^(?P<name>.+?) (?:\\(formerly known as .+?\\) )?left the game$')],
-				'WHITELIST_FAIL': [re.compile('^com.mojang.authlib.GameProfile.+?id=(?P<uuid>[-a-f0-9]+),.*?name=(?P<name>.+?),.*?lost connection: You are not white-listed on this server!.*?$')],
+				'PLAYER_IP': [re.compile('^(?P<name>.+?)\\[/(?P<ip>.+?):(?P<port>[0-9]+?)\\] logged in with entity id.*?$')],
+				'PLAYER_CONNECT': [re.compile('^(?P<name>.+?) (?:\\(formerly known as .+?\\) )?joined the game$')],
+				'PLAYER_DISCONNECT': [re.compile('^(?P<name>.+?) (?:\\(formerly known as .+?\\) )?left the game$')],
+				'WHITELIST_FAIL': [re.compile('^com.mojang.authlib.GameProfile.+?id=(?P<uuid>[-a-f0-9]+),.*?name=(?P<name>.+?),.*? \\(/(?P<ip>.+?):(?P<port>[0-9]+?)\\) lost connection: You are not white-listed on this server!.*?$')],
 				'MESSAGE': [
 					re.compile('^(?P<raw><(?P<name>.+?)> (?P<message>.*?))$'),
 					re.compile('^(?P<raw>\\[(?P<name>[^ ]+?)\\] (?P<message>.*?))$')
@@ -143,7 +143,7 @@ class MCUDPProtocol(asyncio.Protocol):
 					]
 				},
 			'User Authenticator': {
-				'USER_UUID': [re.compile('^UUID of player (?P<name>.+) is (?P<uuid>[-a-f0-9]+)$')]
+				'PLAYER_UUID': [re.compile('^UUID of player (?P<name>.+) is (?P<uuid>[-a-f0-9]+)$')]
 				}
 			}
 
