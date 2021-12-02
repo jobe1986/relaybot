@@ -1,6 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <config>
 	<!--
+		Create a copy of this file called config.xml in the config directory then edit
+		as needed.
+	-->
+
+	<!--
 		Runtime options:
 			debug: enables debug logging
 			nofork: prevents the bot forking into the background
@@ -11,11 +16,11 @@
 	<!--
 		Modules config:
 		Loads the named modules.
-
-		Currently only the irc and minecraft modules exist	
 	-->
 	<module name="irc" />
 	<module name="minecraft" />
+	<module name="relayirctominecraft" />
+	<module name="relayminecrafttoirc" />
 
 	<!--
 		Logging config:
@@ -84,4 +89,23 @@
 		-->
 		<udp host="127.0.0.1" port="25605" />
 	</minecraft>
+
+	<!--
+		Relay (IRC to Minecraft) module config:
+	-->
+	<relayirctominecraft name="IRCNetwork">
+		<irc name="IRCNetwork" /> <!-- name of the IRC client config from above -->
+		<minecraft name="Minecraft" /> <!-- name of the Minecraft client config from above -->
+	</relayirctominecraft>
+
+	<!--
+		Relay (Minecraft to IRC) module config:
+	-->
+	<relayminecrafttoirc name="Minecraft">
+		<minecraft name="Minecraft" /> <!-- name of the Minecraft client config from above -->
+		<irc name="IRCNetwork"> <!-- name of the IRC client config from above -->
+			<!-- Add a <channel /> block for each IRC channel you wish to relay to. -->
+			<channel name="#minecraft" />
+		</irc>
+	</relayminecrafttoirc>
 </config>
