@@ -20,6 +20,7 @@
 # along with RelayBot.  If not, see <http://www.gnu.org/licenses/>.
 
 import core.logging as _logging
+import core.modules as _modules
 import asyncio
 
 log = _logging.log.getChild(__name__)
@@ -113,12 +114,17 @@ class IRCClientProtocol(asyncio.Protocol):
 
 				if msg['msg'] in self.handlers:
 					self.handlers[msg['msg']](msg)
+
+				_modules.send_event(self.loop, self.module, self.config['name'], 'irc', 'IRC_RAW', msg)
 		return
 
 	def shutdown(self, loop):
 		self.isshutdown = True
 		self._send('QUIT', 'Shutting down')
 		self.transport.close()
+
+	def handle_event(self, loop, module, sender, protocol, event, data):
+		return
 
 	def m_005(self, msg):
 		if self.hasperformed:
@@ -268,7 +274,8 @@ class IRCClientProtocol(asyncio.Protocol):
 							event = 'USER_ACTION'
 					evt = {'irc': msg, 'name': msg['source']['name'], 'target': target, 'message': text}
 					self.log.debug('Event "' + event + '": ' + str(evt))
-					#relay events here
+
+					_modules.send_event(self.loop, self.module, self.config['name'], 'irc', event, evt)
 			else:
 				if text[0] == '\x01':
 					text = text[1:]

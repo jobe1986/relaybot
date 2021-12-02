@@ -27,6 +27,7 @@ configs = {}
 
 def loadconfig(config, module):
 	global configs
+	global log
 
 	for irccfg in config:
 		if not 'name' in irccfg.attrib:
@@ -110,6 +111,7 @@ def loadconfig(config, module):
 
 def applyconfig(loop, module):
 	global configs
+	global log
 
 	import modules.irc.protocol as _protocol
 
@@ -121,7 +123,18 @@ def applyconfig(loop, module):
 	return
 
 def shutdown(loop):
+	global log
 	import modules.irc.protocol as _protocol
 	
 	for cli in _protocol.clients:
 		_protocol.clients[cli].shutdown(loop)
+
+def handle_event(loop, module, sender, protocol, event, data):
+	global log
+	import modules.irc.protocol as _protocol
+	
+	for cli in _protocol.clients:
+		if module.name == 'irc' and protocol == 'irc' and sender == cli:
+			continue
+		log.debug('Sending event "' + event + '" to client "' + cli + '"')
+		_protocol.clients[cli].handle_event(loop, module, sender, protocol, event, data)

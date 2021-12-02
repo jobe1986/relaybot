@@ -27,6 +27,7 @@ configs = {}
 
 def loadconfig(config, module):
 	global configs
+	global log
 
 	for mccfg in config:
 		if not 'name' in mccfg.attrib:
@@ -77,6 +78,7 @@ def loadconfig(config, module):
 
 def applyconfig(loop, module):
 	global configs
+	global log
 
 	import modules.minecraft.udpprotocol as _udpprotocol
 	import modules.minecraft.rconprotocol as _rconprotocol
@@ -91,6 +93,8 @@ def applyconfig(loop, module):
 	return
 
 def shutdown(loop):
+	global log
+
 	import modules.minecraft.udpprotocol as _udpprotocol
 	import modules.minecraft.rconprotocol as _rconprotocol
 
@@ -99,3 +103,21 @@ def shutdown(loop):
 
 	for cli in _rconprotocol.clients:
 		_rconprotocol.clients[cli].shutdown(loop)
+
+def handle_event(loop, module, sender, protocol, event, data):
+	global log
+
+	import modules.minecraft.udpprotocol as _udpprotocol
+	import modules.minecraft.rconprotocol as _rconprotocol
+
+	for cli in _udpprotocol.clients:
+		if module.name == 'minecraft' and protocol == 'udp' and sender == cli:
+			continue
+		log.debug('Sending event "' + event + '" to client "' + cli + '" udp')
+		_udpprotocol.clients[cli].handle_event(loop, module, sender, protocol, event, data)
+
+	for cli in _rconprotocol.clients:
+		if module.name == 'minecraft' and protocol == 'rcon' and sender == cli:
+			continue
+		log.debug('Sending event "' + event + '" to client "' + cli + '" rcon')
+		_rconprotocol.clients[cli].handle_event(loop, module, sender, protocol, event, data)

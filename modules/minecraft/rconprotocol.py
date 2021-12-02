@@ -20,6 +20,7 @@
 # along with RelayBot.  If not, see <http://www.gnu.org/licenses/>.
 
 import core.logging as _logging
+import core.modules as _modules
 import asyncio, binascii, re, struct
 
 log = _logging.log.getChild(__name__)
@@ -86,6 +87,9 @@ class MCRConProtocol(asyncio.Protocol):
 		self.isshutdown = True
 		self.transport.close()
 
+	def handle_event(self, loop, module, sender, protocol, event, data):
+		return
+
 	def _rcon_login_callback(self, pkt):
 		if pkt['type'] != 2:
 			return
@@ -111,10 +115,10 @@ class MCRConProtocol(asyncio.Protocol):
 					puuid = {'name': matchp.group('name'), 'uuid': matchp.group('uuid')}
 					pip = {'name': matchp.group('name'), 'ip': '0.0.0.0', 'port': '0'}
 					pcon = {'name': matchp.group('name'), 'uuid': matchp.group('uuid'), 'ip': '0.0.0.0', 'port': '0', 'message': 'joined the game'}
-					self.log.debug('Event "PLAYER_UUID": ' + str(puuid))
-					self.log.debug('Event "PLAYER_IP": ' + str(pip))
-					self.log.debug('Event "PLAYER_CONNECT": ' + str(pcon))
-					#relay events here
+
+					_modules.send_event(self.loop, self.module, self.config['name'], 'rcon', "PLAYER_UUID", puuid)
+					_modules.send_event(self.loop, self.module, self.config['name'], 'rcon', "PLAYER_IP", pip)
+					_modules.send_event(self.loop, self.module, self.config['name'], 'rcon', "PLAYER_CONNECT", pcon)
 		return
 
 	def _resetid(self):

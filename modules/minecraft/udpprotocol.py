@@ -20,6 +20,7 @@
 # along with RelayBot.  If not, see <http://www.gnu.org/licenses/>.
 
 import core.logging as _logging
+import core.modules as _modules
 import asyncio, re
 
 log = _logging.log.getChild(__name__)
@@ -40,14 +41,10 @@ class MCUDPProtocol(asyncio.Protocol):
 
 		self.logre = re.compile('^\[(?P<time>[^\]]+)\] \[(?P<thread>[^\]]+?)(?: #[0-9]+)?/(?P<level>[A-Z]+)\]: (?P<message>[^\\r\\n]+)$')
 		self.msgcb = {
-			'Server thread': {
-				'PLAYER_IP': self.e_player_ip,
-				'PLAYER_CONNECT': self.e_player_connect,
-				'PLAYER_DISCONNECT': self.e_player_disconnect
-				},
-			'User Authenticator': {
-				'PLAYER_UUID': self.e_player_uuid
-				}
+			'PLAYER_IP': self.e_player_ip,
+			'PLAYER_CONNECT': self.e_player_connect,
+			'PLAYER_DISCONNECT': self.e_player_disconnect,
+			'PLAYER_UUID': self.e_player_uuid
 			}
 		self.msgre = {
 			'Server thread': {
@@ -201,6 +198,19 @@ class MCUDPProtocol(asyncio.Protocol):
 		self.log.info('Shutting down UDP listener on ' + self.config['udp']['host'] + ']:' + self.config['udp']['port'])
 		self.transport.close()
 
+	def handle_event(self, loop, module, sender, protocol, event, data):
+		global players
+
+		if sender == self.config['name']:
+			if event == 'PLAYER_CONNECT':
+				if not data['uuid'] in players:
+					players[data['uuid']] = {'name': data['name'], 'ip': data['ip'], 'port': data['port'], 'online': True}
+				elif not players[data['uuid']]['online']:
+					players[data['uuid']]['name'] = data['name']
+					players[data['uuid']]['ip'] = data['ip']
+					players[data['uuid']]['port'] = data['port']
+					players[data['uuid']]['online'] = True
+
 	def e_player_ip(self, evt):
 		global players
 
@@ -251,12 +261,12 @@ class MCUDPProtocol(asyncio.Protocol):
 									evt['uuid'] = uuid
 							self.log.debug('Event "' + event + '": ' + str(evt))
 
-							if thread in self.msgcb:
-								if event in self.msgcb[thread]:
-									if self.msgcb[thread][event]:
-										self.log.debug('Calling callback for event "' + event + '"')
-										self.msgcb[thread][event](evt)
-							#relay events here
+							if event in self.msgcb:
+								if self.msgcb[event]:
+									self.log.debug('Calling callback for event "' + event + '"')
+									self.msgcb[event](evt)
+
+							_modules.send_event(self.loop, self.module, self.config['name'], 'udp', event, evt)
 			else:
 				continue
 		
