@@ -88,7 +88,20 @@ class MCRConProtocol(asyncio.Protocol):
 		self.transport.close()
 
 	def handle_event(self, loop, module, sender, protocol, event, data):
-		return
+		if event != 'RCON_SENDCMD':
+			return
+
+		if not 'command' in data:
+			self.log.warning('Event ' + event + ' missing command to execute')
+			return
+
+		cb = None
+		cmd = data['command']
+
+		if 'callback' in data and data['callback'] is not None:
+			cb = data['callback']
+
+		self._sendcmd(cmd, callback=cb)
 
 	def _rcon_login_callback(self, pkt):
 		if pkt['type'] != 2:

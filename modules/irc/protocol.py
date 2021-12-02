@@ -115,13 +115,14 @@ class IRCClientProtocol(asyncio.Protocol):
 				if msg['msg'] in self.handlers:
 					self.handlers[msg['msg']](msg)
 
-				_modules.send_event(self.loop, self.module, self.config['name'], 'irc', 'IRC_RAW', msg)
+				#_modules.send_event(self.loop, self.module, self.config['name'], 'irc', 'IRC_RAW', msg)
 		return
 
 	def shutdown(self, loop):
 		self.isshutdown = True
 		self._send('QUIT', 'Shutting down')
-		self.transport.close()
+		if self.transport:
+			self.transport.close()
 
 	def handle_event(self, loop, module, sender, protocol, event, data):
 		return
@@ -305,7 +306,8 @@ class IRCClientProtocol(asyncio.Protocol):
 				line += ':'
 			line += param
 
-		self.transport.write((line + '\r\n').encode('utf-8'))
+		if self.transport:
+			self.transport.write((line + '\r\n').encode('utf-8'))
 		self.log.protocol('Sent line: ' + line)
 
 	def _parse_raw_irc(self, line):
