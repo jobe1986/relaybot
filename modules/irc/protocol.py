@@ -27,10 +27,11 @@ log = _logging.log.getChild(__name__)
 clients = {}
 
 class IRCClientProtocol(asyncio.Protocol):
-	def __init__(self, loop, config):
+	def __init__(self, loop, config, module):
 		global clients
 		self.loop = loop
 		self.config = config
+		self.module = module
 		self.transport = None
 		self.log = log.getChildObj(self.config['name'])
 
@@ -340,18 +341,18 @@ class IRCClientProtocol(asyncio.Protocol):
 
 		return ret
 
-async def connectclient(loop, conf):
+async def connectclient(loop, conf, module):
 	try:
 		serv = '[' + conf['server']['host'] + ']:'
 		if conf['server']['tls']:
 			serv = serv + '+'
 		serv = serv + str(conf['server']['port'])
 		log.info('Connecting IRC client ' + conf['name'] + ' to ' + serv)
-		await loop.create_connection(lambda: IRCClientProtocol(loop, conf), conf['server']['host'], conf['server']['port'], ssl=conf['server']['tls'])
+		await loop.create_connection(lambda: IRCClientProtocol(loop, conf, module), conf['server']['host'], conf['server']['port'], ssl=conf['server']['tls'])
 	except Exception as e:
 		log.warning('Exception occurred attempting to connect IRC client ' + conf['name'] + ': ' + str(e))
 		log.info('Reconnecting in 30 seconds')
-		loop.call_later(10, createclient, loop, conf)
+		loop.call_later(10, createclient, loop, conf, module)
 
-def createclient(loop, conf):
-	loop.create_task(connectclient(loop, conf))
+def createclient(loop, conf, module):
+	loop.create_task(connectclient(loop, conf, module))

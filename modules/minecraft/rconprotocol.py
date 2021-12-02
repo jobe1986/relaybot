@@ -27,10 +27,11 @@ log = _logging.log.getChild(__name__)
 clients = {}
 
 class MCRConProtocol(asyncio.Protocol):
-	def __init__(self, loop, config):
+	def __init__(self, loop, config, module):
 		global clients
 		self.loop = loop
 		self.config = config
+		self.module = module
 		self.transport = None
 		self.log = log.getChildObj(self.config['name'])
 		self.id = 0
@@ -65,7 +66,7 @@ class MCRConProtocol(asyncio.Protocol):
 			return
 
 		self.log.info('Reconnecting in 30 seconds')
-		self.loop.call_later(30, createclient, self.loop, self.config)
+		self.loop.call_later(30, createclient, self.loop, self.config, self.module)
 
 	def eof_received(self):
 		self.log.debug('EOF received')
@@ -97,7 +98,7 @@ class MCRConProtocol(asyncio.Protocol):
 			return
 		self.log.warning('RCON login failed, password incorrect?')
 		self.log.info('Reconnecting in 30 seconds')
-		self.loop.call_later(30, createclient, self.loop, self.config)
+		self.loop.call_later(30, createclient, self.loop, self.config, self.module)
 
 	def _rcon_list_uuids(self, pkt):
 		payload = pkt['payload'].decode('utf-8')
@@ -109,7 +110,7 @@ class MCRConProtocol(asyncio.Protocol):
 				if matchp:
 					puuid = {'name': matchp.group('name'), 'uuid': matchp.group('uuid')}
 					pip = {'name': matchp.group('name'), 'ip': '0.0.0.0', 'port': '0'}
-					pcon = {'name': matchp.group('name')}
+					pcon = {'name': matchp.group('name'), 'uuid': matchp.group('uuid'), 'ip': '0.0.0.0', 'port': '0', 'message': 'joined the game'}
 					self.log.debug('Event "PLAYER_UUID": ' + str(puuid))
 					self.log.debug('Event "PLAYER_IP": ' + str(pip))
 					self.log.debug('Event "PLAYER_CONNECT": ' + str(pcon))
@@ -152,15 +153,15 @@ class MCRConProtocol(asyncio.Protocol):
 			self.log.warning('Exception unpacking RCON packet: ' + str(e))
 		return pkt
 
-async def connectclient(loop, conf):
+async def connectclient(loop, conf, module):
 	try:
 		log.info('Connecting RCON client ' + conf['name'] + ' to ' + '[' + conf['rcon']['host'] + ']:' + conf['rcon']['port'])
-		await loop.create_connection(lambda: MCRConProtocol(loop, conf), conf['rcon']['host'], conf['rcon']['port'])
+		await loop.create_connection(lambda: MCRConProtocol(loop, conf, module), conf['rcon']['host'], conf['rcon']['port'])
 	except Exception as e:
 		log.warning('Exception occurred attempting to connect RCON client ' + conf['name'] + ': ' + str(e))
 		log.info('Reconnecting in 30 seconds')
-		loop.call_later(10, createclient, loop, conf)
+		loop.call_later(10, createclient, loop, conf, module)
 	return
 
-def createclient(loop, conf):
-	loop.create_task(connectclient(loop, conf))
+def createclient(loop, conf, module):
+	loop.create_task(connectclient(loop, conf, module))

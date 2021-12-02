@@ -25,23 +25,35 @@ import asyncio, re
 log = _logging.log.getChild(__name__)
 
 clients = {}
+players = {}
 
 class MCUDPProtocol(asyncio.Protocol):
-	def __init__(self, loop, config):
+	def __init__(self, loop, config, module):
 		global clients
 		self.loop = loop
 		self.config = config
+		self.module = module
 		self.transport = None
 		self.log = log.getChildObj(self.config['name'])
 
 		self.isshutdown = False
 
 		self.logre = re.compile('^\[(?P<time>[^\]]+)\] \[(?P<thread>[^\]]+?)(?: #[0-9]+)?/(?P<level>[A-Z]+)\]: (?P<message>[^\\r\\n]+)$')
+		self.msgcb = {
+			'Server thread': {
+				'PLAYER_IP': self.e_player_ip,
+				'PLAYER_CONNECT': self.e_player_connect,
+				'PLAYER_DISCONNECT': self.e_player_disconnect
+				},
+			'User Authenticator': {
+				'PLAYER_UUID': self.e_player_uuid
+				}
+			}
 		self.msgre = {
 			'Server thread': {
 				'PLAYER_IP': [re.compile('^(?P<name>.+?)\\[/(?P<ip>.+?):(?P<port>[0-9]+?)\\] logged in with entity id.*?$')],
-				'PLAYER_CONNECT': [re.compile('^(?P<name>.+?) (?:\\(formerly known as .+?\\) )?joined the game$')],
-				'PLAYER_DISCONNECT': [re.compile('^(?P<name>.+?) (?:\\(formerly known as .+?\\) )?left the game$')],
+				'PLAYER_CONNECT': [re.compile('^(?P<name>.+?) (?P<message>(?:\\(formerly known as .+?\\) )?joined the game)$')],
+				'PLAYER_DISCONNECT': [re.compile('^(?P<name>.+?) (?P<message>(?:\\(formerly known as .+?\\) )?left the game)$')],
 				'WHITELIST_FAIL': [re.compile('^com.mojang.authlib.GameProfile.+?id=(?P<uuid>[-a-f0-9]+),.*?name=(?P<name>.+?),.*? \\(/(?P<ip>.+?):(?P<port>[0-9]+?)\\) lost connection: You are not white-listed on this server!.*?$')],
 				'MESSAGE': [
 					re.compile('^(?P<raw><(?P<name>.+?)> (?P<message>.*?))$'),
@@ -166,7 +178,7 @@ class MCUDPProtocol(asyncio.Protocol):
 			return
 
 		self.log.info('Retrying in 30 seconds')
-		self.loop.call_later(30, createclient, self.loop, self.config)
+		self.loop.call_later(30, createclient, self.loop, self.config, self.module)
 
 	def error_received(self, ex):
 		self.log.debug('Error received: ' + str(ex))
@@ -188,31 +200,85 @@ class MCUDPProtocol(asyncio.Protocol):
 		self.isshutdown = True
 		self.log.info('Shutting down UDP listener on ' + self.config['udp']['host'] + ']:' + self.config['udp']['port'])
 		self.transport.close()
+
+	def e_player_ip(self, evt):
+		global players
+
+		uuid = playeruuidfromname(evt['name'])
+		if uuid:
+			players[uuid]['ip'] = evt['ip']
+			players[uuid]['port'] = evt['port']
+			log.debug('Updated player "' + uuid + '": ' + str(players[uuid]))
+
+	def e_player_uuid(self, evt):
+		global players
+
+		if not evt['uuid'] in players:
+			players[evt['uuid']] = {'name': '', 'ip': '0.0.0.0', 'port': '', 'online': False}
+
+		players[evt['uuid']]['name'] = evt['name']
+		log.debug('Cached player "' + evt['uuid'] + '": ' + str(players[evt['uuid']]))
+
+	def e_player_connect(self, evt):
+		global players
+
+		uuid = playeruuidfromname(evt['name'])
+		if uuid:
+			players[uuid]['online'] = True
+
+	def e_player_disconnect(self, evt):
+		global players
+
+		uuid = playeruuidfromname(evt['name'])
+		if uuid:
+			players[uuid]['online'] = False
 	
 	def _handle_msg(self, msg):
+		global players
+
 		for thread in self.msgre:
 			if msg['thread'] == thread:
 				for event in self.msgre[thread]:
 					for rec in self.msgre[thread][event]:
 						match = rec.match(msg['message'])
 						if match:
-							self.log.debug('Event "' + event + '": ' + str(match.groupdict()))
+							evt = match.groupdict()
+							if event == 'PLAYER_CONNECT':
+								uuid = playeruuidfromname(evt['name'])
+								if uuid:
+									evt['ip'] = players[uuid]['ip']
+									evt['port'] = players[uuid]['port']
+									evt['uuid'] = uuid
+							self.log.debug('Event "' + event + '": ' + str(evt))
+
+							if thread in self.msgcb:
+								if event in self.msgcb[thread]:
+									if self.msgcb[thread][event]:
+										self.log.debug('Calling callback for event "' + event + '"')
+										self.msgcb[thread][event](evt)
 							#relay events here
 			else:
 				continue
 		
 		return
 
-async def connectclient(loop, conf):
+async def connectclient(loop, conf, module):
 	try:
 		serv = '[' + conf['udp']['host'] + ']:' + conf['udp']['port']
 		log.info('Creating UDP listener ' + conf['name'] + ' listening on ' + serv)
-		await loop.create_datagram_endpoint(lambda: MCUDPProtocol(loop, conf), (conf['udp']['host'], conf['udp']['port']), reuse_address=True, reuse_port=True)
+		await loop.create_datagram_endpoint(lambda: MCUDPProtocol(loop, conf, module), (conf['udp']['host'], conf['udp']['port']), reuse_address=True, reuse_port=True)
 	except Exception as e:
 		log.warning('Exception occurred attempting to create UDP listener ' + conf['name'] + ': ' + str(e))
 		log.info('Retrying in 30 seconds')
-		loop.call_later(10, createclient, loop, conf)
+		loop.call_later(10, createclient, loop, conf, module)
 	return
 
-def createclient(loop, conf):
-	loop.create_task(connectclient(loop, conf))
+def createclient(loop, conf, module):
+	loop.create_task(connectclient(loop, conf, module))
+
+def playeruuidfromname(name):
+	global players
+	for uuid in players:
+		if players[uuid]['name'] == name:
+			return uuid
+	return None

@@ -38,6 +38,7 @@ def loadmod(name):
 	try:
 		m = importlib.import_module('modules.' + name)
 		importlib.invalidate_caches()
+		m.name = name
 	except Exception as e:
 		log.error('Error loading module ' + name + ': ' + str(e))
 		return False
@@ -64,7 +65,7 @@ def loadconfig(config):
 		if m != None:
 			if hasattr(m, 'loadconfig'):
 				cfg = config.findall(name)
-				m.loadconfig(cfg)
+				m.loadconfig(cfg, m)
 
 	return True
 
@@ -73,7 +74,7 @@ def applyconfig(loop):
 	for name in mods:
 		if hasattr(mods[name], 'applyconfig'):
 			log.debug('Applying configuration for module ' + name)
-			mods[name].applyconfig(loop)
+			mods[name].applyconfig(loop, mods[name])
 
 def shutdown(loop):
 	global mods

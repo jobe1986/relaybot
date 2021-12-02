@@ -25,7 +25,7 @@ log = _logging.log.getChild(__name__)
 
 configs = {}
 
-def loadconfig(config):
+def loadconfig(config, module):
 	global configs
 
 	for irccfg in config:
@@ -108,7 +108,7 @@ def loadconfig(config):
 		log.debug('Loaded config: ' + str(conf))
 	return
 
-def applyconfig(loop):
+def applyconfig(loop, module):
 	global configs
 
 	import modules.irc.protocol as _protocol
@@ -117,7 +117,7 @@ def applyconfig(loop):
 		conf = configs[name]
 		log.info('Creating IRC client ' + name)
 
-		_protocol.createclient(loop, conf)
+		_protocol.createclient(loop, conf, module)
 	return
 
 def shutdown(loop):

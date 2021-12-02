@@ -25,7 +25,7 @@ log = _logging.log.getChild(__name__)
 
 configs = {}
 
-def loadconfig(config):
+def loadconfig(config, module):
 	global configs
 
 	for mccfg in config:
@@ -75,7 +75,7 @@ def loadconfig(config):
 		log.debug('Loaded config: ' + str(conf))
 	return
 
-def applyconfig(loop):
+def applyconfig(loop, module):
 	global configs
 
 	import modules.minecraft.udpprotocol as _udpprotocol
@@ -84,11 +84,10 @@ def applyconfig(loop):
 	for name in configs:
 		conf = configs[name]
 		log.info('Creating Minecraft client ' + name)
-
 		if conf['udp'] is not None:
-			_udpprotocol.createclient(loop, conf)
+			_udpprotocol.createclient(loop, conf, module)
 		if conf['rcon'] is not None:
-			_rconprotocol.createclient(loop, conf)
+			_rconprotocol.createclient(loop, conf, module)
 	return
 
 def shutdown(loop):
