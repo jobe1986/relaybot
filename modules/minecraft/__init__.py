@@ -121,3 +121,28 @@ def handle_event(loop, module, sender, protocol, event, data):
 			continue
 		log.debug('Sending event "' + event + '" to client "' + cli + '" rcon')
 		_rconprotocol.clients[cli].handle_event(loop, module, sender, protocol, event, data)
+
+def handle_event_target(loop, target, module, sender, protocol, event, data):
+	global log
+
+	import modules.minecraft.udpprotocol as _udpprotocol
+	import modules.minecraft.rconprotocol as _rconprotocol
+
+	if 'module' in target and target['module'] != 'minecraft':
+		return
+
+	for cli in _udpprotocol.clients:
+		if module.name == 'minecraft' and protocol == 'udp' and sender == cli:
+			continue
+		if 'name' in target and target['name'] != cli:
+			continue
+		log.debug('Sending event "' + event + '" to client "' + cli + '" udp')
+		_udpprotocol.clients[cli].handle_event(loop, module, sender, protocol, event, data)
+
+	for cli in _rconprotocol.clients:
+		if module.name == 'minecraft' and protocol == 'rcon' and sender == cli:
+			continue
+		if 'name' in target and target['name'] != cli:
+			continue
+		log.debug('Sending event "' + event + '" to client "' + cli + '" rcon')
+		_rconprotocol.clients[cli].handle_event(loop, module, sender, protocol, event, data)

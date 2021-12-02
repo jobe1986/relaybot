@@ -138,3 +138,18 @@ def handle_event(loop, module, sender, protocol, event, data):
 			continue
 		log.debug('Sending event "' + event + '" to client "' + cli + '"')
 		_protocol.clients[cli].handle_event(loop, module, sender, protocol, event, data)
+
+def handle_event_target(loop, target, module, sender, protocol, event, data):
+	global log
+	import modules.irc.protocol as _protocol
+
+	if 'module' in target and target['module'] != 'irc':
+		return
+
+	for cli in _protocol.clients:
+		if module.name == 'irc' and protocol == 'irc' and sender == cli:
+			continue
+		if 'name' in target and target['name'] != cli:
+			continue
+		log.debug('Sending event "' + event + '" to client "' + cli + '"')
+		_protocol.clients[cli].handle_event(loop, module, sender, protocol, event, data)

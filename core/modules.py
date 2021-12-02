@@ -86,6 +86,9 @@ def shutdown(loop):
 def send_event(loop, module, sender, protocol, event, data):
 	loop.create_task(_dispatch_event(loop, module, sender, protocol, event, data))
 
+def send_event_target(loop, target, module, sender, protocol, event, data):
+	loop.create_task(_dispatch_event_target(loop, target, module, sender, protocol, event, data))
+
 async def _dispatch_event(loop, module, sender, protocol, event, data):
 	global mods
 
@@ -95,3 +98,13 @@ async def _dispatch_event(loop, module, sender, protocol, event, data):
 	for name in mods:
 		if hasattr(mods[name], 'handle_event'):
 			mods[name].handle_event(loop, module, sender, protocol, event, data)
+
+async def _dispatch_event_target(loop, target, module, sender, protocol, event, data):
+	global mods
+
+	evt = {'event': event, 'module': module.name, 'sender': sender, 'protocol': protocol, 'target': target}
+	log.debug('Event ' + str(evt) + ': ' + str(data))
+
+	for name in mods:
+		if hasattr(mods[name], 'handle_event_target'):
+			mods[name].handle_event(loop, target, module, sender, protocol, event, data)
