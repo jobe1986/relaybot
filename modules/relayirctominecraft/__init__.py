@@ -27,6 +27,8 @@ log = _logging.log.getChild(__name__)
 
 configs = {}
 
+rconlistre = re.compile('^(?P<header>There are \d+ of a max of \d+ players online:) ?(?P<list>.*?)$')
+
 def loadconfig(config, module):
 	global configs
 	global log
@@ -84,7 +86,7 @@ def handle_event(loop, module, sender, protocol, event, data):
 	global log
 	global configs
 	
-	events = ['USER_MESSAGE', 'USER_ACTION']
+	events = ['CHANNEL_MESSAGE', 'CHANNEL_ACTION']
 
 	if module.name != 'irc':
 		return
@@ -100,27 +102,73 @@ def handle_event(loop, module, sender, protocol, event, data):
 		if conf['irc'] != sender:
 			continue
 
-		parts = []
-		parts.append('[IRC] ')
-		if event == 'USER_MESSAGE':
-			parts.append('<' + data['name'] + '> ')
-		elif event == 'USER_ACTION':
-			parts.append('* ' + data['name'] + ' ')
+		if data['message'].split(' ')[0] == '?players':
+			cbsourcemod = _modules.getmodule('minecraft')
+			if not cbsourcemod:
+				continue
+			cbtarget = {'module': module.name, 'name': sender}
+			cbsource = {'module': cbsourcemod, 'name': conf['minecraft'], 'protocol': 'rcon'}
 
-		for part in filter(None, re.split('(https?://[^\s]+)', data['message'])):
-			if part[0:7] == 'http://' or part[0:8] == 'https://':
-				parts.append({'text': part, 'underlined': True, 'clickEvent': {'action': 'open_url', 'value': part}})
-			else:
-				parts.append(part)
-		text = json.dumps(parts)
+			target = {'module': 'minecraft', 'name': conf['minecraft']}
+			evt = {'command': 'list', 'callback': _mypartial(_rcon_list_callback, loop=loop, source=cbsource, target=cbtarget, irctarget=data['target'])}
 
-		target = {'module': 'minecraft', 'name': conf['minecraft']}
-		evt = {'command': 'tellraw @a ' + text, 'callback': None}
-		
-		_modules.send_event_target(loop, target, module, sender, 'relay', 'RCON_SENDCMD', evt)
+			_modules.send_event_target(loop, target, module, sender, 'relay', 'RCON_SENDCMD', evt)
+		else:
+			parts = []
+			parts.append('[IRC] ')
+			if event == 'CHANNEL_MESSAGE':
+				parts.append('<' + data['name'] + '> ')
+			elif event == 'CHANNEL_ACTION':
+				parts.append('* ' + data['name'] + ' ')
 
-def handle_event_target(loop, target, module, sender, protocol, event, data):
+			for part in filter(None, re.split('(https?://[^\s]+)', data['message'])):
+				if part[0:7] == 'http://' or part[0:8] == 'https://':
+					parts.append({'text': part, 'underlined': True, 'clickEvent': {'action': 'open_url', 'value': part}})
+				else:
+					parts.append(part)
+			text = json.dumps(parts)
+
+			target = {'module': 'minecraft', 'name': conf['minecraft']}
+			evt = {'command': 'tellraw @a ' + text, 'callback': None}
+			
+			_modules.send_event_target(loop, target, module, sender, 'relay', 'RCON_SENDCMD', evt)
+
+def _rcon_list_callback(packet, loop, source, target, irctarget):
 	global log
-	global configs
+	global rconlistre
+
+	log.debug(str(packet) + " " + str(source) + ' ' + str(target) + ' ' + irctarget)
+
+	listtext = packet['payload'].decode('utf-8')
+
+	m = rconlistre.match(listtext)
+	if not m:
+		return
+
+	evt = {'command': 'PRIVMSG ' + irctarget + ' :' + m.group('header'), 'callback': None}
+	_modules.send_event_target(loop, target, source['module'], source['name'], 'relay', 'IRC_SENDCMD', evt)
+	if m.group('list') != '':
+		evt = {'command': 'PRIVMSG ' + irctarget + ' :' + m.group('list'), 'callback': None}
+		_modules.send_event_target(loop, target, source['module'], source['name'], 'relay', 'IRC_SENDCMD', evt)
 
 	return
+
+def _mypartial(func, *args, **kwargs):
+	from functools import partial
+	name = func.__name__
+	argsl = []
+	
+	if len(args) > 0:
+		for arg in args:
+			argsl.append(str(arg))
+		temp = ','.join(argsl)
+		argsl = [temp]
+	
+	for k in kwargs:
+		argsl.append(str(k) + '=\'' + str(kwargs[k]) + '\'')
+	
+	name = name + '(' + ','.join(argsl) + ')'
+	
+	f = partial(func, *args, **kwargs)
+	f.__name__ = name
+	return f

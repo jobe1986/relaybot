@@ -139,9 +139,3 @@ def handle_event(loop, module, sender, protocol, event, data):
 		for chan in conf['channels']:
 			evt = {'command': 'PRIVMSG ' + chan + ' :' + text, 'callback': None}
 			_modules.send_event_target(loop, target, module, sender, 'relay', 'IRC_SENDCMD', evt)
-
-def handle_event_target(loop, target, module, sender, protocol, event, data):
-	global log
-	global configs
-
-	return

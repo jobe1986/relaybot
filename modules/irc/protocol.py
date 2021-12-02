@@ -273,13 +273,13 @@ class IRCClientProtocol(asyncio.Protocol):
 		if len(text) > 0:
 			if target in self.chans:
 				if self.chans[target]['joined']:
-					event = 'USER_MESSAGE'
+					event = 'CHANNEL_MESSAGE'
 					if text[:7] == '\x01ACTION':
 						if len(text) > 8:
 							text = text[8:]
 							if text[-1] == '\x01':
 								text = text[:-1]
-							event = 'USER_ACTION'
+							event = 'CHANNEL_ACTION'
 					evt = {'irc': msg, 'name': msg['source']['name'], 'target': target, 'message': text}
 					self.log.debug('Event "' + event + '": ' + str(evt))
 

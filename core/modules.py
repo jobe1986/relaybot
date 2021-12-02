@@ -69,6 +69,13 @@ def loadconfig(config):
 
 	return True
 
+def getmodule(name):
+	global mods
+
+	if name in mods:
+		return mods[name]
+	return None
+
 def applyconfig(loop):
 	global mods
 	for name in mods:
