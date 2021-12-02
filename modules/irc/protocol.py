@@ -125,7 +125,14 @@ class IRCClientProtocol(asyncio.Protocol):
 			self.transport.close()
 
 	def handle_event(self, loop, module, sender, protocol, event, data):
-		return
+		if event != 'IRC_SENDCMD':
+			return
+
+		if not 'command' in data:
+			self.log.warning('Event ' + event + ' missing command to execute')
+			return
+
+		self._send(data['command'])
 
 	def m_005(self, msg):
 		if self.hasperformed:
