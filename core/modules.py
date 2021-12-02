@@ -107,4 +107,4 @@ async def _dispatch_event_target(loop, target, module, sender, protocol, event, 
 
 	for name in mods:
 		if hasattr(mods[name], 'handle_event_target'):
-			mods[name].handle_event(loop, target, module, sender, protocol, event, data)
+			mods[name].handle_event_target(loop, target, module, sender, protocol, event, data)
