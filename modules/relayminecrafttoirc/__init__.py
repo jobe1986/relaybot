@@ -30,7 +30,6 @@ configs = {}
 def loadconfig(config, module):
 	global configs
 	global log
-	global selfmodule
 
 	selfmodule = module
 
@@ -94,7 +93,6 @@ def shutdown(loop):
 def handle_event(loop, module, sender, protocol, event, data):
 	global log
 	global configs
-	global selfmodule
 	
 	events = [
 		'PLAYER_CONNECT',
