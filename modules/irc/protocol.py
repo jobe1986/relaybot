@@ -96,7 +96,7 @@ class IRCClientProtocol(asyncio.Protocol):
 			return
 
 		self.log.info('Reconnecting in 30 seconds')
-		self.loop.call_later(30, createclient, self.loop, self.config)
+		self.loop.call_later(30, createclient, self.loop, self.config, self.module)
 		return
 
 	def eof_received(self):
