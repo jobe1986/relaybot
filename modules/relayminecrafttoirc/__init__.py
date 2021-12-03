@@ -31,8 +31,6 @@ def loadconfig(config, module):
 	global configs
 	global log
 
-	selfmodule = module
-
 	for relaycfg in config:
 		if not 'name' in relaycfg.attrib:
 			log.warning('Relay (Minecraft To IRC) config missing name attribute')
