@@ -94,7 +94,12 @@
 		Relay (IRC to Minecraft) module config:
 	-->
 	<relayirctominecraft name="IRCNetwork">
-		<irc name="IRCNetwork" /> <!-- name of the IRC client config from above -->
+		<irc name="IRCNetwork"> <!-- name of the IRC client config from above -->
+			<!--
+				Add zero or more <channel /> blocks for IRC channels to relay to minecraft.
+				If you dont include any then all channels will be relayed.
+			-->
+		</irc>
 		<minecraft name="Minecraft" /> <!-- name of the Minecraft client config from above -->
 	</relayirctominecraft>
 

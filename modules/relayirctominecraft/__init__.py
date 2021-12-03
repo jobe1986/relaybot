@@ -44,7 +44,7 @@ def loadconfig(config, module):
 			continue
 
 		name = relaycfg.attrib['name']
-		conf = {'name': name, 'irc': '', 'minecraft': ''}
+		conf = {'name': name, 'irc': '', 'minecraft': '', 'channels': []}
 
 		irc = relaycfg.findall('./irc')
 		if not irc:
@@ -53,6 +53,14 @@ def loadconfig(config, module):
 		if not 'name' in irc[0].attrib:
 			log.warning('Relay (IRC To Minecraft) ' + name + ' IRC configuration missing name attribute')
 			continue
+
+		ircchans = irc[0].findall('./channel')
+		if ircchans:
+			for chan in ircchans:
+				if not 'name' in chan.attrib:
+					log.warning('Relay (IRC To Minecraft) ' + name + ' IRC channel configuration missing name attribute')
+					continue
+				conf['channels'].append(chan.attrib['name'].lower())
 
 		conf['irc'] = irc[0].attrib['name']
 
@@ -101,6 +109,10 @@ def handle_event(loop, module, sender, protocol, event, data):
 
 		if conf['irc'] != sender:
 			continue
+
+		if len(conf['channels']) > 0:
+			if not data['target'].lower() in conf['channels']:
+				continue
 
 		if data['message'].split(' ')[0] == '?players':
 			cbsourcemod = _modules.getmodule('minecraft')
