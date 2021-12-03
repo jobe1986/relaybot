@@ -78,6 +78,7 @@ def getmodule(name):
 
 def applyconfig(loop):
 	global mods
+
 	for name in mods:
 		if hasattr(mods[name], 'applyconfig'):
 			log.debug('Applying configuration for module ' + name)

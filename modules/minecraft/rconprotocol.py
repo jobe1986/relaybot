@@ -122,7 +122,7 @@ class MCRConProtocol(asyncio.Protocol):
 		match = self.listre['main'].match(payload)
 		if match:
 			players = match.group('list')
-			_modules.send_event(self.loop, self.module, self.config['name'], 'rcon', 'PLAYERS_CLEAR', None)
+			_modules.send_event(self.loop, self.module, self.config['name'], 'rcon', 'PLAYERS_OFFLINE', None)
 			for player in players.split(', '):
 				matchp = self.listre['player'].match(player)
 				if matchp:
