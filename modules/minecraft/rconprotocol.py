@@ -145,6 +145,7 @@ class MCRConProtocol(asyncio.Protocol):
 		self.id += 1
 		self.log.protocol('Sending RCON packet: ' + binascii.hexlify(pkt).decode('utf-8'))
 		self.transport.write(pkt)
+		self.log.protocol('Parsed RCON packet: ' + str(self._rcondecode(pkt)))
 		return rid
 
 	def _rconpacket(self, id=0, type=0, payload=None):
