@@ -122,6 +122,7 @@ class MCRConProtocol(asyncio.Protocol):
 		match = self.listre['main'].match(payload)
 		if match:
 			players = match.group('list')
+			_modules.send_event(self.loop, self.module, self.config['name'], 'rcon', 'PLAYERS_CLEAR', None)
 			for player in players.split(', '):
 				matchp = self.listre['player'].match(player)
 				if matchp:
@@ -129,9 +130,9 @@ class MCRConProtocol(asyncio.Protocol):
 					pip = {'name': matchp.group('name'), 'ip': '0.0.0.0', 'port': '0'}
 					pcon = {'name': matchp.group('name'), 'uuid': matchp.group('uuid'), 'ip': '0.0.0.0', 'port': '0', 'message': 'joined the game'}
 
-					_modules.send_event(self.loop, self.module, self.config['name'], 'rcon', "PLAYER_UUID", puuid)
-					_modules.send_event(self.loop, self.module, self.config['name'], 'rcon', "PLAYER_IP", pip)
-					_modules.send_event(self.loop, self.module, self.config['name'], 'rcon', "PLAYER_CONNECT", pcon)
+					_modules.send_event(self.loop, self.module, self.config['name'], 'rcon', 'PLAYER_UUID', puuid)
+					_modules.send_event(self.loop, self.module, self.config['name'], 'rcon', 'PLAYER_IP', pip)
+					_modules.send_event(self.loop, self.module, self.config['name'], 'rcon', 'PLAYER_CONNECT', pcon)
 		return
 
 	def _resetid(self):
