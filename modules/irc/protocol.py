@@ -318,7 +318,7 @@ class IRCClientProtocol(asyncio.Protocol):
 		self.log.protocol('Sent line: ' + line)
 
 	def _parse_raw_irc(self, line):
-		ret = {'source': {'full': "", 'name': "", 'ident': "", 'host': ""}, 'msg': "", 'params': []}
+		ret = {'source': {'full': '', 'name': '', 'ident': '', 'host': ''}, 'msg': '', 'params': []}
 		stat = 0
 		words = line.split(' ')
 
@@ -328,7 +328,7 @@ class IRCClientProtocol(asyncio.Protocol):
 
 			if (stat == 0):
 				stat += 1
-				if (word[0] == ":"):
+				if (word[0] == ':'):
 					ret['source']['full'] = word[1:]
 				else:
 					ret['msg'] = word
@@ -337,22 +337,22 @@ class IRCClientProtocol(asyncio.Protocol):
 				ret['msg'] = word
 				stat += 1
 			elif (stat == 2):
-				if (word[0] == ":"):
+				if (word[0] == ':'):
 					ret['params'].append(word[1:])
 					stat += 1
 				else:
 					ret['params'].append(word)
 			else:
-				ret['params'][-1] = ret['params'][-1] + " " + word
+				ret['params'][-1] = ret['params'][-1] + ' ' + word
 
 		if (len(ret['source']['full']) > 0):
 			src = ret['source']['full']
-			if (src.find("@") >= 0):
-				ret['source']['host'] = src[src.find("@")+1:]
-				src = src[:src.find("@")]
-			if (src.find("!") >= 0):
-				ret['source']['ident'] = src[src.find("!")+1:]
-				src = src[:src.find("!")]
+			if (src.find('@') >= 0):
+				ret['source']['host'] = src[src.find('@')+1:]
+				src = src[:src.find('@')]
+			if (src.find('!') >= 0):
+				ret['source']['ident'] = src[src.find('!')+1:]
+				src = src[:src.find('!')]
 			ret['source']['name'] = src
 
 		return ret

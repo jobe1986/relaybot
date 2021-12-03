@@ -149,7 +149,7 @@ def _rcon_list_callback(packet, loop, source, target, irctarget):
 	global log
 	global rconlistre
 
-	log.debug(str(packet) + " " + str(source) + ' ' + str(target) + ' ' + irctarget)
+	log.debug(str(packet) + ' ' + str(source) + ' ' + str(target) + ' ' + irctarget)
 
 	listtext = packet['payload'].decode('utf-8')
 
