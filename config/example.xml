@@ -21,6 +21,7 @@
 	<module name="minecraft" />
 	<module name="relayirctominecraft" />
 	<module name="relayminecrafttoirc" />
+	<module name="minecraftircwhitelist" />
 
 	<!--
 		Logging config:
@@ -113,4 +114,20 @@
 			<channel name="#minecraft" />
 		</irc>
 	</relayminecrafttoirc>
+
+	<!--
+		Minecraft IRC Whitelist modile config:
+	-->
+	<minecraftircwhitelist name="Minecraft">
+		<minecraft name="Minecraft" /> <!-- name of the Minecraft client config from above -->
+		<irc name="IRCNetwork"> <!-- name of the IRC client config from above -->
+			<!--
+				Add a <channel /> block for each IRC channel you wish to enable the
+				?whitelist command on.
+				NOTE: Use of the ?whitelist fantasy command will require you to be opped in the
+				IRC channel.
+			-->
+			<channel name="#minecraft" />
+		</irc>
+	</minecraftircwhitelist>
 </config>
