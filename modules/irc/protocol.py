@@ -248,8 +248,7 @@ class IRCClientProtocol(asyncio.Protocol):
 				for p in pfx:
 					pfxm = pfxm + self.chanusrpfxmodes[self.chanusrpfx.index(p)]
 
-				if nuh['name'].lower() != self.user['nick'].lower():
-					self.chans[chan]['users'][nuh['name'].lower()] = pfxm
+				self.chans[chan]['users'][nuh['name'].lower()] = {'nick': nuh['name'], 'status': pfxm}
 
 	def m_433(self, msg):
 		targ = msg['params'][0]
@@ -303,10 +302,10 @@ class IRCClientProtocol(asyncio.Protocol):
 					who = msg['params'][nextparam]
 					if who.lower() in self.chans[target.lower()]['users']:
 						if add:
-							if not m in self.chans[target.lower()]['users'][who.lower()]:
-								self.chans[target.lower()]['users'][who.lower()] = self.chans[target.lower()]['users'][who.lower()] + m
+							if not m in self.chans[target.lower()]['users'][who.lower()]['status']:
+								self.chans[target.lower()]['users'][who.lower()]['status'] = self.chans[target.lower()]['users'][who.lower()]['status'] + m
 						else:
-							self.chans[target.lower()]['users'][who.lower()] = self.chans[target.lower()]['users'][who.lower()].replace(m, '')
+							self.chans[target.lower()]['users'][who.lower()]['status'] = self.chans[target.lower()]['users'][who.lower()]['status'].replace(m, '')
 					nextparam = nextparam + 1
 				elif m in self.chanmodes[0]:
 					nextparam = nextparam + 1
@@ -324,9 +323,9 @@ class IRCClientProtocol(asyncio.Protocol):
 				log.info('Joined channel ' + self.chans[chan]['name'])
 				self.chans[chan]['joined'] = True
 				self.chans[chan]['users'] = {}
-		else:
-			if chan in self.chans:
-				self.chans[chan]['users'][who] = ''
+
+		if chan in self.chans:
+			self.chans[chan]['users'][who] = {'nick': msg['source']['name'], 'status': ''}
 
 	def m_kick(self, msg):
 		chan = msg['params'][0].lower()
@@ -353,11 +352,12 @@ class IRCClientProtocol(asyncio.Protocol):
 			self.user['nick'] = newnick
 			self.user['newnick'] = newnick
 			log.info('Changed nick to ' + newnick)
-		else:
-			for chan in self.chans:
-				if who in self.chans[chan]['users']:
-					self.chans[chan]['users'][newnick.lower()] = self.chans[chan]['users'][who]
-					del self.chans[chan]['users'][who]
+
+		for chan in self.chans:
+			if who in self.chans[chan]['users']:
+				self.chans[chan]['users'][newnick.lower()] = self.chans[chan]['users'][who]
+				self.chans[chan]['users'][newnick.lower()]['nick'] = newnick
+				del self.chans[chan]['users'][who]
 
 	def m_part(self, msg):
 		chan = msg['params'][0].lower()
@@ -410,7 +410,7 @@ class IRCClientProtocol(asyncio.Protocol):
 						ops = []
 						for user in self.chans[target.lower()]['users']:
 							if self._isop(user, target):
-								ops.append(user)
+								ops.append(self.chans[target.lower()]['users'][user]['nick'])
 
 						self._send('PRIVMSG', target, 'Ops: ' + ', '.join(ops))
 
@@ -478,7 +478,7 @@ class IRCClientProtocol(asyncio.Protocol):
 			return False
 		if not nick.lower() in self.chans[chan.lower()]['users']:
 			return False
-		if 'o' in self.chans[chan.lower()]['users'][nick.lower()]:
+		if 'o' in self.chans[chan.lower()]['users'][nick.lower()]['status']:
 			return True
 		return False
 
