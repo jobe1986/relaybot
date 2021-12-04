@@ -55,6 +55,8 @@ class IRCClientProtocol(asyncio.Protocol):
 		self.chanusrpfxmodes = 'ov'
 		self.chanmodes = ['b', 'k', 'l', 'imnpst']
 
+		self.timers = []
+
 		self.handlers = {
 			'005': self.m_005,
 			'353': self.m_353,
@@ -137,6 +139,11 @@ class IRCClientProtocol(asyncio.Protocol):
 		self._send('QUIT', 'Shutting down')
 		if self.transport:
 			self.transport.close()
+		for timer in self.timers:
+			try:
+				timer.cancel()
+			except:
+				pass
 
 	def handle_event(self, loop, module, sender, protocol, event, data):
 		if event != 'IRC_SENDCMD':
@@ -336,10 +343,13 @@ class IRCClientProtocol(asyncio.Protocol):
 				log.info('Kicked from channel channel ' + self.chans[chan]['name'])
 				self.chans[chan]['joined'] = False
 
+				hand = None
 				if 'key' in self.chans[chan]:
-					self.loop.call_later(self.rejoindelay, self._send, 'JOIN', chan, self.chans[chan]['key'])
+					hand = self.loop.call_later(self.rejoindelay, self._send, 'JOIN', chan, self.chans[chan]['key'])
 				else:
-					self.loop.call_later(self.rejoindelay, self._send, 'JOIN', chan)
+					hand = self.loop.call_later(self.rejoindelay, self._send, 'JOIN', chan)
+				if hand:
+					self.timers.append(hand)
 		else:
 			if chan in self.chans:
 				del self.chans[chan]['users'][victim]
@@ -405,6 +415,13 @@ class IRCClientProtocol(asyncio.Protocol):
 		target = msg['params'][0]
 		if len(text) > 0:
 			if target.lower() in self.chans:
+				statusmodes = ''
+				if msg['source']['name'].lower() in self.chans[target.lower()]['users']:
+					statusmodes = self.chans[target.lower()]['users'][msg['source']['name'].lower()]['status']
+
+				src = msg['source'].copy()
+				src['modes'] = statusmodes
+
 				if text.split(' ')[0] == '?ops':
 					if self._isop(msg['source']['name'], target):
 						ops = []
@@ -422,7 +439,7 @@ class IRCClientProtocol(asyncio.Protocol):
 							if text[-1] == '\x01':
 								text = text[:-1]
 							event = 'CHANNEL_ACTION'
-					evt = {'irc': msg, 'name': msg['source']['name'], 'target': target.lower(), 'message': text}
+					evt = {'name': msg['source']['name'], 'target': target.lower(), 'message': text, 'source': src}
 					self.log.debug('Event "' + event + '": ' + str(evt))
 
 					_modules.send_event(self.loop, self.module, self.config['name'], 'irc', event, evt)
@@ -446,7 +463,7 @@ class IRCClientProtocol(asyncio.Protocol):
 							if text[-1] == '\x01':
 								text = text[:-1]
 							event = 'USER_ACTION'
-					evt = {'irc': msg, 'name': msg['source']['name'], 'target': target, 'message': text}
+					evt = {'name': msg['source']['name'], 'target': target, 'message': text, 'source': msg['source']}
 					self.log.debug('Event "' + event + '": ' + str(evt))
 
 					_modules.send_event(self.loop, self.module, self.config['name'], 'irc', event, evt)
