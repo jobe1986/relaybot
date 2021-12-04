@@ -22,6 +22,7 @@
 import core.logging as _logging
 import core.modules as _modules
 import asyncio
+import re
 
 log = _logging.log.getChild(__name__)
 
@@ -44,6 +45,13 @@ class IRCClientProtocol(asyncio.Protocol):
 		self.chans = config['channels']
 		self.user = config['user']
 		self.user['newnick'] = self.user['nick']
+
+		self.n005kv = re.compile('^(?P<key>[^=]+?)(?:=(?P<value>.*?))?$')
+
+		self.chantypes = '#'
+		self.chanusrpfx = '@+'
+		self.chanusrpfxmodes = 'ov'
+		self.chanmodes = ['b', 'k', 'l', 'imnpst']
 
 		self.handlers = {
 			'005': self.m_005,
@@ -137,6 +145,27 @@ class IRCClientProtocol(asyncio.Protocol):
 	def m_005(self, msg):
 		if self.hasperformed:
 			return
+
+		for isup in msg['params'][1:-1]:
+			m = self.n005kv.match(isup)
+			if not m:
+				self.log.warning('Numeric 005 option failed parsing: ' + isup)
+				continue
+
+			key = m.group('key')
+			value = m.group('value')
+
+			if key == 'CHANTYPES':
+				if value:
+					self.chantypes = value
+			elif key == 'PREFIX':
+				if value:
+					pfxparts = value.split(')')
+					self.chanusrpfx = pfxparts[1]
+					self.chanusrpfxmodes = pfxparts[0][1:]
+			elif key == 'CHANMODES':
+				if value:
+					self.chanmodes = value.split(',')
 
 		chans = []
 		chank = {}
@@ -269,9 +298,9 @@ class IRCClientProtocol(asyncio.Protocol):
 
 	def m_privmsg(self, msg):
 		text = msg['params'][-1]
-		target = msg['params'][0].lower()
+		target = msg['params'][0]
 		if len(text) > 0:
-			if target in self.chans:
+			if target.lower() in self.chans:
 				if self.chans[target]['joined']:
 					event = 'CHANNEL_MESSAGE'
 					if text[:7] == '\x01ACTION':
@@ -280,20 +309,34 @@ class IRCClientProtocol(asyncio.Protocol):
 							if text[-1] == '\x01':
 								text = text[:-1]
 							event = 'CHANNEL_ACTION'
-					evt = {'irc': msg, 'name': msg['source']['name'], 'target': target, 'message': text}
+					evt = {'irc': msg, 'name': msg['source']['name'], 'target': target.lower(), 'message': text}
 					self.log.debug('Event "' + event + '": ' + str(evt))
 
 					_modules.send_event(self.loop, self.module, self.config['name'], 'irc', event, evt)
 			else:
-				if text[0] == '\x01':
-					text = text[1:]
-					if len(text) > 0:
-						if text[-1] == '\x01':
-							text = text[:-1]
-					if len(text) > 0:
-						words = text.split(' ')
+				vtext = text
+				if vtext[0] == '\x01':
+					vtext = vtext[1:]
+					if len(vtext) > 0:
+						if vtext[-1] == '\x01':
+							vtext = vtext[:-1]
+					if len(vtext) > 0:
+						words = vtext.split(' ')
 						if words[0].upper() == 'VERSION':
 							self._send('NOTICE', msg['source']['name'], '\x01VERSION RelayBot 2.0 https://github.com/jobe1986/relaybot\x01')
+
+				if not self._ischannel(target):
+					event = 'USER_MESSAGE'
+					if text[:7] == '\x01ACTION':
+						if len(text) > 8:
+							text = text[8:]
+							if text[-1] == '\x01':
+								text = text[:-1]
+							event = 'USER_ACTION'
+					evt = {'irc': msg, 'name': msg['source']['name'], 'target': target, 'message': text}
+					self.log.debug('Event "' + event + '": ' + str(evt))
+
+					_modules.send_event(self.loop, self.module, self.config['name'], 'irc', event, evt)
 
 	def _capend(self):
 		self._send('CAP', 'END')
@@ -316,6 +359,13 @@ class IRCClientProtocol(asyncio.Protocol):
 		if self.transport:
 			self.transport.write((line + '\r\n').encode('utf-8'))
 		self.log.protocol('Sent line: ' + line)
+
+	def _ischannel(self, name):
+		if len(name) < 1:
+			return False
+		if not name[0] in self.chantypes:
+			return False
+		return True
 
 	def _parse_raw_irc(self, line):
 		ret = {'source': {'full': '', 'name': '', 'ident': '', 'host': ''}, 'msg': '', 'params': []}
