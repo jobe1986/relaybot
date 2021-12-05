@@ -21,7 +21,7 @@
 
 import core.logging as _logging
 import core.modules as _modules
-import json, re
+import functools, json, re
 
 log = _logging.log.getChild(__name__)
 
@@ -120,7 +120,7 @@ def handle_event(loop, module, sender, protocol, event, data):
 			cbsource = {'module': cbsourcemod, 'name': conf['minecraft'], 'protocol': 'rcon'}
 
 			target = {'module': 'minecraft', 'name': conf['minecraft']}
-			evt = {'command': 'list', 'callback': _mypartial(_rcon_list_callback, loop=loop, source=cbsource, target=cbtarget, irctarget=data['target'])}
+			evt = {'command': 'list', 'callback': functools.partial(_rcon_list_callback, loop=loop, source=cbsource, target=cbtarget, irctarget=data['target'])}
 
 			_modules.send_event_target(loop, target, module, sender, 'relay', 'RCON_SENDCMD', evt)
 
@@ -162,23 +162,3 @@ def _rcon_list_callback(packet, loop, source, target, irctarget):
 		_modules.send_event_target(loop, target, source['module'], source['name'], 'relay', 'IRC_SENDCMD', evt)
 
 	return
-
-def _mypartial(func, *args, **kwargs):
-	from functools import partial
-	name = func.__name__
-	argsl = []
-	
-	if len(args) > 0:
-		for arg in args:
-			argsl.append(str(arg))
-		temp = ','.join(argsl)
-		argsl = [temp]
-	
-	for k in kwargs:
-		argsl.append(str(k) + '=\'' + str(kwargs[k]) + '\'')
-	
-	name = name + '(' + ','.join(argsl) + ')'
-	
-	f = partial(func, *args, **kwargs)
-	f.__name__ = name
-	return f

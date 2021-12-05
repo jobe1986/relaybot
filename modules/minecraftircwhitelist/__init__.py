@@ -21,7 +21,7 @@
 
 import core.logging as _logging
 import core.modules as _modules
-import json, re
+import functools, json, re
 
 log = _logging.log.getChild(__name__)
 
@@ -142,7 +142,7 @@ def handle_event(loop, module, sender, protocol, event, data):
 		cbsource = {'module': cbsourcemod, 'name': configs[conf]['minecraft'], 'protocol': 'rcon'}
 
 		target = {'module': 'minecraft', 'name': configs[conf]['minecraft']}
-		evt = {'command': 'whitelist ' + parts[1] + ' ' + parts[2], 'callback': _mypartial(_rcon_whitelist_reply, loop=loop, source=cbsource, target=cbtarget, irctarget=data['target'])}
+		evt = {'command': 'whitelist ' + parts[1] + ' ' + parts[2], 'callback': functools.partial(_rcon_whitelist_reply, loop=loop, source=cbsource, target=cbtarget, irctarget=data['target'])}
 
 		_modules.send_event_target(loop, target, module, sender, 'whitelist', 'RCON_SENDCMD', evt)
 
@@ -156,23 +156,3 @@ def _rcon_whitelist_reply(packet, loop, source, target, irctarget):
 	if reply and len(reply) > 0:
 		evt = {'command': 'PRIVMSG ' + irctarget + ' :' + reply, 'callback': None}
 		_modules.send_event_target(loop, target, source['module'], source['name'], 'whitelist', 'IRC_SENDCMD', evt)
-
-def _mypartial(func, *args, **kwargs):
-	from functools import partial
-	name = func.__name__
-	argsl = []
-	
-	if len(args) > 0:
-		for arg in args:
-			argsl.append(str(arg))
-		temp = ','.join(argsl)
-		argsl = [temp]
-	
-	for k in kwargs:
-		argsl.append(str(k) + '=\'' + str(kwargs[k]) + '\'')
-	
-	name = name + '(' + ','.join(argsl) + ')'
-	
-	f = partial(func, *args, **kwargs)
-	f.__name__ = name
-	return f
