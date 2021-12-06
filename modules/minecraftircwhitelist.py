@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# RelayBot - Simple VNC Relay Service, modules/minecraftircwhitelist/__init__.py
+# RelayBot - Simple VNC Relay Service, modules/minecraftircwhitelist.py
 #
 # Copyright (C) 2016 Matthew Beeching
 #
