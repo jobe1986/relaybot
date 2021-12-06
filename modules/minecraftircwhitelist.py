@@ -2,7 +2,7 @@
 
 # RelayBot - Simple VNC Relay Service, modules/minecraftircwhitelist.py
 #
-# Copyright (C) 2016 Matthew Beeching
+# Copyright (C) 2021 Matthew Beeching
 #
 # This file is part of RelayBot.
 #
