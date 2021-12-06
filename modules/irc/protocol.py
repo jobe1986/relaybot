@@ -55,6 +55,7 @@ class IRCClientProtocol(asyncio.Protocol):
 		self.chanusrpfxmodes = 'ov'
 		self.chanmodes = ['b', 'k', 'l', 'imnpst']
 
+		self.rejointimer = None
 		self.timers = []
 
 		self.handlers = {
@@ -139,11 +140,23 @@ class IRCClientProtocol(asyncio.Protocol):
 		self._send('QUIT', 'Shutting down')
 		if self.transport:
 			self.transport.close()
+		for chan in self.chans:
+			if self.chans[chan]['jointimer']:
+				try:
+					self.chans[chan]['jointimer'].cancel()
+				except:
+					pass
 		for timer in self.timers:
 			try:
 				timer.cancel()
 			except:
 				pass
+		if self.rejointimer:
+			try:
+				self.rejointimer.cancel()
+			except:
+				pass
+			self.rejointimer = None
 
 	def handle_event(self, loop, module, sender, protocol, event, data):
 		if event != 'IRC_SENDCMD':
@@ -182,54 +195,10 @@ class IRCClientProtocol(asyncio.Protocol):
 		if self.hasperformed:
 			return
 
-		chans = []
-		chank = {}
 		for chan in self.chans:
 			self.chans[chan]['joined'] = False
-			chan = self.chans[chan]
 
-			if 'key' in chan:
-				chank[chan['name']] = chan['key']
-			else:
-				chans.append(chan['name'])
-
-		i = 0
-		chanlst = ''
-		for chan in chans:
-			if len(chanlst) > 0:
-				chanlst += ','
-			chanlst += chan
-			i += 1
-
-			if i >= 5:
-				self.log.debug('Joining channels: ' + chanlst)
-				self._send('JOIN', chanlst)
-				chanlst = ''
-				i = 0
-		if i > 0:
-			self.log.debug('Joining channels: ' + chanlst)
-			self._send('JOIN', chanlst)
-
-		i = 0
-		chanlst = ''
-		keylst = ''
-		for chan in chank:
-			if len(chanlst) > 0:
-				chanlst += ','
-				keylst += ' '
-			chanlst += chan
-			keylst += chank[chan]
-			i += 1
-
-			if i >= 5:
-				self.log.debug('Joining channels: ' + chanlst)
-				self._send('JOIN', chanlst, keylst)
-				chanlst = ''
-				keylst = ''
-				i = 0
-		if i > 0:
-			self.log.debug('Joining channels: ' + chanlst)
-			self._send('JOIN', chanlst, keylst)
+		self._joinchans()
 
 		self.hasperformed = True
 
@@ -330,6 +299,11 @@ class IRCClientProtocol(asyncio.Protocol):
 				log.info('Joined channel ' + self.chans[chan]['name'])
 				self.chans[chan]['joined'] = True
 				self.chans[chan]['users'] = {}
+				try:
+					self.chans[chan]['jointimer'].cancel()
+				except:
+					pass
+				self.chans[chan]['jointimer'] = None
 
 		if chan in self.chans:
 			self.chans[chan]['users'][who] = {'nick': msg['source']['name'], 'status': ''}
@@ -340,16 +314,10 @@ class IRCClientProtocol(asyncio.Protocol):
 
 		if victim == self.user['nick'].lower():
 			if chan in self.chans:
-				log.info('Kicked from channel channel ' + self.chans[chan]['name'])
+				log.info('Kicked from channel ' + self.chans[chan]['name'])
 				self.chans[chan]['joined'] = False
 
-				hand = None
-				if 'key' in self.chans[chan]:
-					hand = self.loop.call_later(self.rejoindelay, self._send, 'JOIN', chan, self.chans[chan]['key'])
-				else:
-					hand = self.loop.call_later(self.rejoindelay, self._send, 'JOIN', chan)
-				if hand:
-					self.timers.append(hand)
+			self.chans[chan]['jointimer'] = self.loop.call_later(self.rejoindelay, self._joinchan, chan)
 		else:
 			if chan in self.chans:
 				del self.chans[chan]['users'][victim]
@@ -471,6 +439,81 @@ class IRCClientProtocol(asyncio.Protocol):
 	def _capend(self):
 		self._send('CAP', 'END')
 		self.capendhandle = None
+
+	def _joinchans(self):
+		self.log.debug('Checking channels to JOIN')
+		self.rejointimer = None
+
+		j = 0
+		chans = []
+		chank = {}
+		for chan in self.chans:
+			if self.chans[chan]['joined']:
+				continue
+			chan = self.chans[chan]
+
+			if 'key' in chan:
+				chank[chan['name']] = chan['key']
+			else:
+				chans.append(chan['name'])
+
+			j = j + 1
+
+		if j <= 0:
+			return
+
+		i = 0
+		chanlst = ''
+		for chan in chans:
+			if len(chanlst) > 0:
+				chanlst += ','
+			chanlst += chan
+			i += 1
+
+			if i >= 5:
+				self.log.debug('Joining channels: ' + chanlst)
+				self._send('JOIN', chanlst)
+				chanlst = ''
+				i = 0
+		if i > 0:
+			self.log.debug('Joining channels: ' + chanlst)
+			self._send('JOIN', chanlst)
+
+		i = 0
+		chanlst = ''
+		keylst = ''
+		for chan in chank:
+			if len(chanlst) > 0:
+				chanlst += ','
+				keylst += ' '
+			chanlst += chan
+			keylst += chank[chan]
+			i += 1
+
+			if i >= 5:
+				self.log.debug('Joining channels: ' + chanlst)
+				self._send('JOIN', chanlst, keylst)
+				chanlst = ''
+				keylst = ''
+				i = 0
+		if i > 0:
+			self.log.debug('Joining channels: ' + chanlst)
+			self._send('JOIN', chanlst, keylst)
+
+		self.rejointimer = self.loop.call_later(self.rejoindelay, self._joinchans)
+
+	def _joinchan(self, chan):
+		if self.chans[chan]['joined']:
+			return
+
+		log.debug('Attempting to join channel ' + chan)
+
+		if 'key' in self.chans[chan]:
+			self._send('JOIN', chan, self.chans[chan]['key'])
+		else:
+			self._send('JOIN', chan)
+
+		self.chans[chan]['jointimer'] = self.loop.call_later(self.rejoindelay, self._joinchan, chan)
 
 	def _send(self, msg, *params, **kwargs):
 		line = msg
