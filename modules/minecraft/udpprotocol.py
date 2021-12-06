@@ -213,7 +213,7 @@ class MCUDPProtocol(asyncio.Protocol):
 					self.e_player_connect(evt)
 			elif event == 'PLAYERS_OFFLINE':
 				for uuid in players:
-					evt = {'name': players[uuid]['name'], 'uuid': uuid, 'ip': players[uuid]['ip'], 'port': players[uuid]['port']}
+					evt = {'name': players[uuid]['name'], 'uuid': uuid, 'ip': players[uuid]['ip'], 'port': players[uuid]['port'], 'message': 'left the game'}
 					_modules.send_event(self.loop, self.module, self.config['name'], 'udp', 'PLAYER_DISCONNECT', evt)
 					self.e_player_disconnect(evt)
 
