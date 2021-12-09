@@ -37,6 +37,8 @@ class MCRConProtocol(asyncio.Protocol):
 		self.log = log.getChildObj(self.config['name'])
 		self.id = 0
 
+		self.buf = b''
+
 		self.rconcallbacks = {}
 		self.rconcallbacks[-1] = self._rcon_login_failure;
 
@@ -73,15 +75,30 @@ class MCRConProtocol(asyncio.Protocol):
 		self.log.debug('EOF received')
 
 	def data_received(self, data):
-		self.log.protocol('Received RCON packet: ' + binascii.hexlify(data).decode('utf-8'))
-		pkt = self._rcondecode(data)
-		self.log.protocol('Parsed RCON packet: ' + str(pkt))
+		self.log.protocol('Received RCON data: ' + binascii.hexlify(data).decode('utf-8'))
+		self.buf = self.buf + data
 
-		if pkt['id'] in self.rconcallbacks:
-			self.rconcallbacks[pkt['id']](pkt)
-			del self.rconcallbacks[pkt['id']]
+		while True:
+			if len(self.buf) < 4:
+				break
 
-		# TODO: handle payload fragmentation (4096 max size payload)
+			(length,) = struct.unpack('<i', self.buf[:4])
+
+			if len(self.buf) < (length + 4):
+				break
+
+			dbuf = self.buf[:length + 4]
+			self.buf = self.buf[length + 4:]
+
+			self.log.protocol('Parsing RCON packet: ' + binascii.hexlify(dbuf).decode('utf-8'))
+
+			pkt = self._rcondecode(dbuf)
+			self.log.protocol('Parsed RCON packet: ' + str(pkt))
+
+			if pkt['id'] in self.rconcallbacks:
+				self.rconcallbacks[pkt['id']](pkt)
+				del self.rconcallbacks[pkt['id']]
+			# TODO: handle payload fragmentation (4096 max size payload)
 
 	def shutdown(self, loop):
 		self.isshutdown = True
@@ -163,7 +180,7 @@ class MCRConProtocol(asyncio.Protocol):
 
 	def _rcondecode(self, raw):
 		pkt = {'id': -1, 'type': -1, 'payload': 'ERROR'}
-		
+
 		try:
 			(length,) = struct.unpack('<i', raw[:4])
 			fmt = '<ii%ds2s' % (length-10)

@@ -210,6 +210,7 @@ class MCUDPProtocol(asyncio.Protocol):
 					players[data['uuid']]['ip'] = data['ip']
 					players[data['uuid']]['port'] = data['port']
 					players[data['uuid']]['online'] = True
+					evt = {'name': players[uuid]['name'], 'uuid': uuid, 'ip': players[uuid]['ip'], 'port': players[uuid]['port'], 'message': 'joined the game'}
 					self.e_player_connect(evt)
 			elif event == 'PLAYERS_OFFLINE':
 				for uuid in players:

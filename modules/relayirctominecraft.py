@@ -155,10 +155,16 @@ def _rcon_list_callback(packet, loop, source, target, irctarget):
 	if not m:
 		return
 
+	rtarget = {'module': source['module'].name, 'name': source['name']}
+
 	evt = {'command': 'PRIVMSG ' + irctarget + ' :' + m.group('header'), 'callback': None}
+	revt = {'command': 'tellraw @a ' + json.dumps(['[IRC] ', m.group('header')]), 'callback': None}
 	_modules.send_event_target(loop, target, source['module'], source['name'], 'relay', 'IRC_SENDCMD', evt)
+	_modules.send_event_target(loop, rtarget, source['module'], source['name'], 'relay', 'RCON_SENDCMD', revt)
 	if m.group('list') != '':
 		evt = {'command': 'PRIVMSG ' + irctarget + ' :' + m.group('list'), 'callback': None}
+		revt = {'command': 'tellraw @a ' + json.dumps(['[IRC] ', m.group('list')]), 'callback': None}
 		_modules.send_event_target(loop, target, source['module'], source['name'], 'relay', 'IRC_SENDCMD', evt)
+		_modules.send_event_target(loop, rtarget, source['module'], source['name'], 'relay', 'RCON_SENDCMD', revt)
 
 	return
