@@ -30,12 +30,14 @@ players = {}
 
 class MCUDPProtocol(asyncio.Protocol):
 	def __init__(self, loop, config, module):
-		global clients
+		global clients, players
 		self.loop = loop
 		self.config = config
 		self.module = module
 		self.transport = None
 		self.log = log.getChildObj(self.config['name'])
+
+		players[self.config['name']] = {}
 
 		self.isshutdown = False
 
@@ -203,53 +205,53 @@ class MCUDPProtocol(asyncio.Protocol):
 
 		if sender == self.config['name']:
 			if event == 'PLAYER_CONNECT':
-				if not data['uuid'] in players:
-					players[data['uuid']] = {'name': data['name'], 'ip': data['ip'], 'port': data['port'], 'online': True}
-				elif not players[data['uuid']]['online']:
-					players[data['uuid']]['name'] = data['name']
-					players[data['uuid']]['ip'] = data['ip']
-					players[data['uuid']]['port'] = data['port']
-					players[data['uuid']]['online'] = True
-					evt = {'name': players[data['uuid']]['name'], 'uuid': data['uuid'], 'ip': players[data['uuid']]['ip'], 'port': players[data['uuid']]['port'], 'message': 'joined the game'}
+				if not data['uuid'] in players[self.config['name']]:
+					players[self.config['name']][data['uuid']] = {'name': data['name'], 'ip': data['ip'], 'port': data['port'], 'online': True}
+				elif not players[self.config['name']][data['uuid']]['online']:
+					players[self.config['name']][data['uuid']]['name'] = data['name']
+					players[self.config['name']][data['uuid']]['ip'] = data['ip']
+					players[self.config['name']][data['uuid']]['port'] = data['port']
+					players[self.config['name']][data['uuid']]['online'] = True
+					evt = {'name': players[self.config['name']][data['uuid']]['name'], 'uuid': data['uuid'], 'ip': players[self.config['name']][data['uuid']]['ip'], 'port': players[self.config['name']][data['uuid']]['port'], 'message': 'joined the game'}
 					self.e_player_connect(evt)
 			elif event == 'PLAYERS_OFFLINE':
-				for uuid in players:
-					if players[uuid]['online']:
-						evt = {'name': players[uuid]['name'], 'uuid': uuid, 'ip': players[uuid]['ip'], 'port': players[uuid]['port'], 'message': 'left the game'}
+				for uuid in players[self.config['name']]:
+					if players[self.config['name']][uuid]['online']:
+						evt = {'name': players[self.config['name']][uuid]['name'], 'uuid': uuid, 'ip': players[self.config['name']][uuid]['ip'], 'port': players[self.config['name']][uuid]['port'], 'message': 'left the game'}
 						_modules.send_event(self.loop, self.module, self.config['name'], 'udp', 'PLAYER_DISCONNECT', evt)
 						self.e_player_disconnect(evt)
 
 	def e_player_ip(self, evt):
 		global players
 
-		uuid = playeruuidfromname(evt['name'])
+		uuid = playeruuidfromname(self.config['name'], evt['name'])
 		if uuid:
-			players[uuid]['ip'] = evt['ip']
-			players[uuid]['port'] = evt['port']
-			log.debug('Updated player "' + uuid + '": ' + str(players[uuid]))
+			players[self.config['name']][uuid]['ip'] = evt['ip']
+			players[self.config['name']][uuid]['port'] = evt['port']
+			log.debug('Updated player "' + uuid + '": ' + str(players[self.config['name']][uuid]))
 
 	def e_player_uuid(self, evt):
 		global players
 
-		if not evt['uuid'] in players:
-			players[evt['uuid']] = {'name': '', 'ip': '0.0.0.0', 'port': '', 'online': False}
+		if not evt['uuid'] in players[self.config['name']]:
+			players[self.config['name']][evt['uuid']] = {'name': '', 'ip': '0.0.0.0', 'port': '', 'online': False}
 
-		players[evt['uuid']]['name'] = evt['name']
-		log.debug('Cached player "' + evt['uuid'] + '": ' + str(players[evt['uuid']]))
+		players[self.config['name']][evt['uuid']]['name'] = evt['name']
+		log.debug('Cached player "' + evt['uuid'] + '": ' + str(players[self.config['name']][evt['uuid']]))
 
 	def e_player_connect(self, evt):
 		global players
 
-		uuid = playeruuidfromname(evt['name'])
+		uuid = playeruuidfromname(self.config['name'], evt['name'])
 		if uuid:
-			players[uuid]['online'] = True
+			players[self.config['name']][uuid]['online'] = True
 
 	def e_player_disconnect(self, evt):
 		global players
 
-		uuid = playeruuidfromname(evt['name'])
+		uuid = playeruuidfromname(self.config['name'], evt['name'])
 		if uuid:
-			players[uuid]['online'] = False
+			players[self.config['name']][uuid]['online'] = False
 
 	def _handle_msg(self, msg):
 		global players
@@ -262,10 +264,10 @@ class MCUDPProtocol(asyncio.Protocol):
 						if match:
 							evt = match.groupdict()
 							if event == 'PLAYER_CONNECT' or event == 'PLAYER_DISCONNECT':
-								uuid = playeruuidfromname(evt['name'])
+								uuid = playeruuidfromname(self.config['name'], evt['name'])
 								if uuid:
-									evt['ip'] = players[uuid]['ip']
-									evt['port'] = players[uuid]['port']
+									evt['ip'] = players[self.config['name']][uuid]['ip']
+									evt['port'] = players[self.config['name']][uuid]['port']
 									evt['uuid'] = uuid
 							self.log.debug('Event "' + event + '": ' + str(evt))
 
@@ -288,15 +290,15 @@ async def connectclient(loop, conf, module):
 	except Exception as e:
 		log.warning('Exception occurred attempting to create UDP listener ' + conf['name'] + ': ' + str(e))
 		log.info('Retrying in 30 seconds')
-		loop.call_later(10, createclient, loop, conf, module)
+		loop.call_later(30, createclient, loop, conf, module)
 	return
 
 def createclient(loop, conf, module):
 	loop.create_task(connectclient(loop, conf, module))
 
-def playeruuidfromname(name):
+def playeruuidfromname(conf, name):
 	global players
-	for uuid in players:
-		if players[uuid]['name'] == name:
+	for uuid in players[conf]:
+		if players[conf][uuid]['name'] == name:
 			return uuid
 	return None
