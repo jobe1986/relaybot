@@ -104,7 +104,7 @@ def handle_event(loop, module, sender, protocol, event, data):
 	if not event in events:
 		return
 
-	log.debug('Received event ' + event + ' to minecraft: ' + str(data))
+	log.debug('Received event ' + event + ' from irc: ' + str(data))
 
 	for conf in configs:
 		if configs[conf]['irc'] != sender:
