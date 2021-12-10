@@ -22,6 +22,7 @@
 	<module name="relayirctominecraft" />
 	<module name="relayminecrafttoirc" />
 	<module name="minecraftircwhitelist" />
+	<module name="minecraftversion" />
 
 	<!--
 		Logging config:
@@ -130,4 +131,20 @@
 			<channel name="#minecraft" />
 		</irc>
 	</minecraftircwhitelist>
+
+	<!--
+		Minecraft Version module config:
+	-->
+	<minecraftversion name="Simplanet">
+		<!--
+			Minecradt:
+				name = Name used to represent this installation in messages sent to IRC
+				jarfile = Must be the parth to the minecraft server.jar file
+		-->
+		<minecraft name="Simplanet" jarfile="/home/simplanet/server/minecraft_server.jar" />
+		<irc name="AfterNet"><!-- name of the IRC client config from above -->
+			<!-- Add a <channel /> block for each IRC channel you wish to relay to. -->
+			<channel name="#minecraft" />
+		</irc>
+	</minecraftversion>
 </config>
