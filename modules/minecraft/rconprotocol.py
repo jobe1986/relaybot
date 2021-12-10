@@ -147,9 +147,9 @@ class MCRConProtocol(asyncio.Protocol):
 					pip = {'name': matchp.group('name'), 'ip': '0.0.0.0', 'port': '0'}
 					pcon = {'name': matchp.group('name'), 'uuid': matchp.group('uuid'), 'ip': '0.0.0.0', 'port': '0', 'message': 'joined the game'}
 
-					_modules.send_event(self.loop, self.module, self.config['name'], 'rcon', 'PLAYER_UUID', puuid)
-					_modules.send_event(self.loop, self.module, self.config['name'], 'rcon', 'PLAYER_IP', pip)
-					_modules.send_event(self.loop, self.module, self.config['name'], 'rcon', 'PLAYER_CONNECT', pcon)
+					self.loop.call_soon(_modules.send_event, self.loop, self.module, self.config['name'], 'rcon', 'PLAYER_UUID', puuid)
+					self.loop.call_soon(_modules.send_event, self.loop, self.module, self.config['name'], 'rcon', 'PLAYER_IP', pip)
+					self.loop.call_soon(_modules.send_event, self.loop, self.module, self.config['name'], 'rcon', 'PLAYER_CONNECT', pcon)
 		return
 
 	def _resetid(self):
