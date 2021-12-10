@@ -54,6 +54,7 @@ class IRCClientProtocol(asyncio.Protocol):
 		self.chanusrpfx = '@+'
 		self.chanusrpfxmodes = 'ov'
 		self.chanmodes = ['b', 'k', 'l', 'imnpst']
+		self.haswhox = False
 
 		self.rejointimer = None
 		self.timers = []
@@ -61,18 +62,21 @@ class IRCClientProtocol(asyncio.Protocol):
 		self.handlers = {
 			'005': self.m_005,
 			'353': self.m_353,
+			'354': self.m_354,
+			'366': self.m_366,
 			'433': self.m_433,
+			'ACCOUNT': self.m_account,
 			'CAP': self.m_cap,
 			'ERROR': self.m_error,
-			'MODE': self.m_mode,
 			'JOIN': self.m_join,
 			'KICK': self.m_kick,
+			'KILL': self.m_kill,
+			'MODE': self.m_mode,
 			'NICK': self.m_nick,
 			'PART': self.m_part,
-			'QUIT': self.m_quit,
-			'KILL': self.m_kill,
 			'PING': self.m_ping,
-			'PRIVMSG': self.m_privmsg
+			'PRIVMSG': self.m_privmsg,
+			'QUIT': self.m_quit
 		}
 
 		self.caps = {
@@ -141,11 +145,11 @@ class IRCClientProtocol(asyncio.Protocol):
 		if self.transport:
 			self.transport.close()
 		for chan in self.chans:
-			if self.chans[chan]['jointimer']:
-				try:
+			try:
+				if self.chans[chan]['jointimer']:
 					self.chans[chan]['jointimer'].cancel()
-				except:
-					pass
+			except:
+				pass
 		for timer in self.timers:
 			try:
 				timer.cancel()
@@ -168,6 +172,7 @@ class IRCClientProtocol(asyncio.Protocol):
 
 		self._send(data['command'])
 
+	#RPL_ISUPPORT
 	def m_005(self, msg):
 		for isup in msg['params'][1:-1]:
 			m = self.n005kv.match(isup)
@@ -191,6 +196,8 @@ class IRCClientProtocol(asyncio.Protocol):
 			elif key == 'CHANMODES':
 				if value:
 					self.chanmodes = value.split(',')
+			elif key == 'WHOX':
+				self.haswhox = True
 
 		if self.hasperformed:
 			return
@@ -202,6 +209,7 @@ class IRCClientProtocol(asyncio.Protocol):
 
 		self.hasperformed = True
 
+	#RPL_NAMREPLY
 	def m_353(self, msg):
 		chan = msg['params'][-2].lower()
 		usrlist = msg['params'][-1]
@@ -224,8 +232,36 @@ class IRCClientProtocol(asyncio.Protocol):
 				for p in pfx:
 					pfxm = pfxm + self.chanusrpfxmodes[self.chanusrpfx.index(p)]
 
-				self.chans[chan]['users'][nuh['name'].lower()] = {'nick': nuh['name'], 'status': pfxm}
+				if nuh['name'].lower() in self.chans[chan]['users']:
+					self.chans[chan]['users'][nuh['name'].lower()]['status'] = pfxm
+				else:
+					self.chans[chan]['users'][nuh['name'].lower()] = {'nick': nuh['name'], 'status': pfxm, 'account': ''}
 
+	#RPL_WHOSPCRPL:
+	def m_354(self, msg):
+		tag = msg['params'][1]
+
+		if tag != '696':
+			return
+
+		who = msg['params'][2].lower()
+		account = msg['params'][3]
+
+		if account == '0':
+			account = ''
+
+		for chan in self.chans:
+			if who in self.chans[chan]['users']:
+				self.chans[chan]['users'][who]['account'] = account
+
+	#RPL_ENDOFNAMES
+	def m_366(self, msg):
+		if self.haswhox:
+			chan = msg['params'][-2]
+			if chan.lower() in self.chans:
+				self._send('WHO', chan, '%tna,696')
+
+	#ERR_NICKNAMEINUSE
 	def m_433(self, msg):
 		targ = msg['params'][0]
 		newnick = msg['params'][1]
@@ -236,6 +272,17 @@ class IRCClientProtocol(asyncio.Protocol):
 				self.user['inc'] += 1
 			self.user['newnick'] = self.config['user']['nick'] + ('%04d' % self.user['inc'])
 			self._send('NICK', self.user['newnick'])
+
+	def m_account(self, msg):
+		who = msg['source']['name'].lower()
+		account = msg['params'][0]
+
+		if account == '*':
+			account = ''
+
+		for chan in self.chans:
+			if who in self.chans[chan]['users']:
+				self.chans[chan]['users'][who]['account'] = account
 
 	def m_cap(self, msg):
 		if msg['params'][1] == 'LS':
@@ -292,7 +339,12 @@ class IRCClientProtocol(asyncio.Protocol):
 
 	def m_join(self, msg):
 		chan = msg['params'][0].lower()
+		account = ''
 		who = msg['source']['name'].lower()
+
+		if len(msg['params']) > 1:
+			if msg['params'][1] != '*':
+				account = msg['params'][1]
 
 		if who == self.user['nick'].lower():
 			if chan in self.chans:
@@ -306,7 +358,8 @@ class IRCClientProtocol(asyncio.Protocol):
 				self.chans[chan]['jointimer'] = None
 
 		if chan in self.chans:
-			self.chans[chan]['users'][who] = {'nick': msg['source']['name'], 'status': ''}
+			self.chans[chan]['users'][who] = {'nick': msg['source']['name'], 'status': '', 'account': account}
+			log.debug('Added user ' + who + ' to channel ' + chan + ': ' + str(self.chans[chan]['users'][who]))
 
 	def m_kick(self, msg):
 		chan = msg['params'][0].lower()
@@ -390,7 +443,9 @@ class IRCClientProtocol(asyncio.Protocol):
 				src = msg['source'].copy()
 				src['modes'] = statusmodes
 
-				if text.split(' ')[0] == '?ops':
+				textparts = text.split(' ')
+
+				if textparts[0] == '?ops':
 					if self._isop(msg['source']['name'], target):
 						ops = []
 						for user in self.chans[target.lower()]['users']:
@@ -398,6 +453,18 @@ class IRCClientProtocol(asyncio.Protocol):
 								ops.append(self.chans[target.lower()]['users'][user]['nick'])
 
 						self._send('PRIVMSG', target, 'Ops: ' + ', '.join(ops))
+				elif textparts[0] == '?account':
+					if self._isop(msg['source']['name'], target):
+						if len(textparts) > 1:
+							who = textparts[1]
+							if not who.lower() in self.chans[target.lower()]['users']:
+								self._send('PRIVMSG', target, 'There is no user named ' + who)
+							else:
+								account = self.chans[target.lower()]['users'][who.lower()]['account']
+								if account == '':
+									self._send('PRIVMSG', target, 'I do not know what account ' + who + ' is logged in as')
+								else:
+									self._send('PRIVMSG', target, who + ' is logged in as ' + account)
 
 				if self.chans[target]['joined']:
 					event = 'CHANNEL_MESSAGE'
