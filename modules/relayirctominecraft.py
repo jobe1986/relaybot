@@ -91,7 +91,7 @@ def shutdown(loop):
 def handle_event(loop, module, sender, protocol, event, data):
 	global log
 	global configs
-	
+
 	events = ['CHANNEL_MESSAGE', 'CHANNEL_ACTION']
 
 	if module.name != 'irc':
@@ -137,6 +137,11 @@ def handle_event(loop, module, sender, protocol, event, data):
 			else:
 				parts.append(part)
 		text = json.dumps(parts)
+
+		target = {'module': 'minecraft', 'name': conf['minecraft']}
+		evt = {'command': 'tellraw @a ' + text, 'callback': None}
+
+		loop.call_soon(_modules.send_event_target, loop, target, module, sender, 'relay', 'RCON_SENDCMD', evt)
 
 def _rcon_list_callback(packet, loop, source, target, irctarget):
 	global log
