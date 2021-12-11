@@ -277,6 +277,7 @@ class MCUDPProtocol(asyncio.Protocol):
 									self.msgcb[event](evt)
 
 							_modules.send_event(self.loop, self.module, self.config['name'], 'udp', event, evt)
+							break
 			else:
 				continue
 
