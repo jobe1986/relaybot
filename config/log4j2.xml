@@ -8,14 +8,14 @@
 			<PatternLayout pattern="[%d{HH:mm:ss} %level]: %msg%n" />
 		</Queue>
 		<RollingRandomAccessFile name="File" fileName="logs/latest.log" filePattern="logs/%d{yyyy-MM-dd}-%i.log.gz">
-			<PatternLayout pattern="[%d{HH:mm:ss}] [%t/%level]: %msg%n" />
+			<PatternLayout pattern="[%d{HH:mm:ss}] [%t/%level]: %msg{nolookups}%n" />
 			<Policies>
 				<TimeBasedTriggeringPolicy />
 				<OnStartupTriggeringPolicy />
 			</Policies>
 		</RollingRandomAccessFile>
 		<Socket name="Socket" host="127.0.0.1" port="25605" protocol="UDP">
-			<PatternLayout pattern="[%d{HH:mm:ss}] [%t/%level]: %msg%n" />
+			<PatternLayout pattern="[%d{HH:mm:ss}] [%t/%level]: %msg{nolookups}%n" />
 		</Socket>
 	</Appenders>
 	<Loggers>
