@@ -102,6 +102,9 @@ def handle_event(loop, module, sender, protocol, event, data):
 
 	log.debug('Relaying event ' + event + ' to minecraft: ' + str(data))
 
+	if len(data['message']) == 0:
+		return # Nothing to relay
+
 	for name in configs:
 		conf = configs[name]
 
@@ -127,6 +130,8 @@ def handle_event(loop, module, sender, protocol, event, data):
 		parts = []
 		parts.append('[IRC] ')
 		if event == 'CHANNEL_MESSAGE':
+			if data['message'][0] == '?':
+				break # Don't relay fantasy commands
 			parts.append('<' + data['name'] + '> ')
 		elif event == 'CHANNEL_ACTION':
 			parts.append('* ' + data['name'] + ' ')
