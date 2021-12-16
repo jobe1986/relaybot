@@ -42,6 +42,7 @@ class MCUDPProtocol(asyncio.Protocol):
 		self.isshutdown = False
 
 		self.logre = re.compile('^\[(?P<time>[^\]]+)\] \[(?P<thread>[^\]]+?)(?: #[0-9]+)?/(?P<level>[A-Z]+)\]: (?P<message>[^\\r\\n]+)$')
+		self.ipre = re.compile('^\[?(?P<ip>.+?)(?:%.*)?\]??$')
 		self.msgcb = {
 			'PLAYER_IP': self.e_player_ip,
 			'PLAYER_CONNECT': self.e_player_connect,
@@ -269,6 +270,10 @@ class MCUDPProtocol(asyncio.Protocol):
 									evt['ip'] = players[self.config['name']][uuid]['ip']
 									evt['port'] = players[self.config['name']][uuid]['port']
 									evt['uuid'] = uuid
+							elif event == 'PLAYER_IP':
+								ipmatch = self.ipre.match(evt['ip'])
+								if ipmatch:
+									evt['ip'] = ipmatch.group('ip')
 							self.log.debug('Event "' + event + '": ' + str(evt))
 
 							if event in self.msgcb:
