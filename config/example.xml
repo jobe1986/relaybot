@@ -76,7 +76,7 @@
 		<!--
 			This module requires your minecraft server to be configured to relay log
 			messages to this bot via UDP using the log4j2 PatternLayout pattern:
-			"[%d{HH:mm:ss}] [%t/%level]: %msg%n"
+			"[%d{HH:mm:ss}] [%t/%level]: %msg{nolookups}%n"
 
 			An example of this message format is:
 			"[21:54:20] [Server thread/INFO]: Jobe joined the game"
