@@ -102,7 +102,7 @@ def handle_event(loop, module, sender, protocol, event, data):
 	global log
 	global configs
 	global moduleobj
-	
+
 	events = ['CHANNEL_MESSAGE']
 
 	if module.name != 'irc':
