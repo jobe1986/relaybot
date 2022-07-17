@@ -122,36 +122,44 @@ def handle_event(loop, module, sender, protocol, event, data):
 				break
 
 		parts = data['message'].split(' ')
-		if parts[0] != '?version':
+		if not parts[0] in ['?version', '?snapshot']:
 			break
 
 		target = {'module': module.name, 'name': sender}
 		cached = ''
 
+		type = 'version'
+		if parts[0] == '?snapshot':
+			type = 'snapshot'
+
 		if (configs[conf]['lastcheck'] is None) or ((datetime.datetime.utcnow() - configs[conf]['lastcheck']).seconds > 300):
 			configs[conf]['jarver'] = _getjarversion(configs[conf]['jarfile'])
-			configs[conf]['latestver'] = _getlatestver('https://launchermeta.mojang.com/mc/game/version_manifest.json')
+			configs[conf]['latestver'], configs[conf]['latestsnap'] = _getlatestver('https://launchermeta.mojang.com/mc/game/version_manifest.json')
 			configs[conf]['lastcheck'] = datetime.datetime.utcnow()
 		else:
 			cached = ' (cached)'
 
 		if configs[conf]['jarver'] is None:
-			evt = {'command': 'PRIVMSG ' + data['target'] + ' :Unable to retrive the current version for ' + configs[conf]['minecraft'], 'callback': None}
+			evt = {'command': 'PRIVMSG ' + data['target'] + ' :Unable to retrive the current ' + type + ' for ' + configs[conf]['minecraft'], 'callback': None}
 			_modules.send_event_target(loop, target, moduleobj, conf, 'version', 'IRC_SENDCMD', evt)
 			break
 		if configs[conf]['latestver'] is None:
-			evt = {'command': 'PRIVMSG ' + data['target'] + ' :Unable to retrieve the latest available version', 'callback': None}
+			evt = {'command': 'PRIVMSG ' + data['target'] + ' :Unable to retrieve the latest available ' + type, 'callback': None}
 			_modules.send_event_target(loop, target, moduleobj, conf, 'version', 'IRC_SENDCMD', evt)
 			break
 
-		if configs[conf]['jarver'] == configs[conf]['latestver']:
-			evt = {'command': 'PRIVMSG ' + data['target'] + ' :' + configs[conf]['minecraft'] + ' is currently up to date and running: ' + configs[conf]['jarver'] + cached, 'callback': None}
+		if type == 'snapshot':
+			evt = {'command': 'PRIVMSG ' + data['target'] + ' :The latest available minecraft snapshot is: ' + configs[conf]['latestsnap'] + cached, 'callback': None}
 			_modules.send_event_target(loop, target, moduleobj, conf, 'version', 'IRC_SENDCMD', evt)
 		else:
-			evt = {'command': 'PRIVMSG ' + data['target'] + ' :' + configs[conf]['minecraft'] + ' is currently running: ' + configs[conf]['jarver'] + cached, 'callback': None}
-			_modules.send_event_target(loop, target, moduleobj, conf, 'version', 'IRC_SENDCMD', evt)
-			evt = {'command': 'PRIVMSG ' + data['target'] + ' :The latest available minecraft version is: ' + configs[conf]['latestver'] + cached, 'callback': None}
-			_modules.send_event_target(loop, target, moduleobj, conf, 'version', 'IRC_SENDCMD', evt)
+			if configs[conf]['jarver'] == configs[conf]['latestver']:
+				evt = {'command': 'PRIVMSG ' + data['target'] + ' :' + configs[conf]['minecraft'] + ' is currently up to date and running: ' + configs[conf]['jarver'] + cached, 'callback': None}
+				_modules.send_event_target(loop, target, moduleobj, conf, 'version', 'IRC_SENDCMD', evt)
+			else:
+				evt = {'command': 'PRIVMSG ' + data['target'] + ' :' + configs[conf]['minecraft'] + ' is currently running: ' + configs[conf]['jarver'] + cached, 'callback': None}
+				_modules.send_event_target(loop, target, moduleobj, conf, 'version', 'IRC_SENDCMD', evt)
+				evt = {'command': 'PRIVMSG ' + data['target'] + ' :The latest available minecraft version is: ' + configs[conf]['latestver'] + cached, 'callback': None}
+				_modules.send_event_target(loop, target, moduleobj, conf, 'version', 'IRC_SENDCMD', evt)
 
 def _getjarversion(file):
 	try:
@@ -166,14 +174,18 @@ def _getjarversion(file):
 def _getlatestver(url):
 	try:
 		jsontxt = ''
+		relval = None
+		snapval = None
 		with urllib.request.urlopen(url) as f:
 			jsontxt = f.read().decode('utf-8')
 			f.close()
 		jsonobj = json.loads(jsontxt)
 		if not 'latest' in jsonobj:
-			return None
-		if not 'release' in jsonobj['latest']:
-			return None
-		return jsonobj['latest']['release']
+			return None, None
+		if 'release' in jsonobj['latest']:
+			relval = jsonobj['latest']['release']
+		if 'snapshot' in jsonobj['latest']:
+			snapval = jsonobj['latest']['snapshot']
+		return relval, snapval
 	except:
-		return None
+		return None, None
