@@ -21,7 +21,7 @@
 
 import core.logging as _logging
 import core.modules as _modules
-import asyncio, binascii, re, struct
+import asyncio, binascii, queue, re, struct
 
 log = _logging.log.getChild(__name__)
 
@@ -41,6 +41,8 @@ class MCRConProtocol(asyncio.Protocol):
 
 		self.rconcallbacks = {}
 		self.rconcallbacks[-1] = self._rcon_login_failure;
+		self.rconqueue = queue.Queue()
+		self.rconwaitid = -1
 
 		self.listre = {
 			'main': re.compile('^There are \d+ of a max of \d+ players online: (?P<list>.*?)$'),
@@ -100,6 +102,11 @@ class MCRConProtocol(asyncio.Protocol):
 				del self.rconcallbacks[pkt['id']]
 			# TODO: handle payload fragmentation (4096 max size payload)
 
+			if self.rconwaitid != pkt['id']:
+				seld.log.warning("Received unexpected RCON reply")
+			self.rconwaitid = -1
+			self._sendnextcmd()
+
 	def shutdown(self, loop):
 		self.isshutdown = True
 		self.transport.close()
@@ -156,15 +163,32 @@ class MCRConProtocol(asyncio.Protocol):
 		self.id = 0
 
 	def _sendcmd(self, cmd, type=2, callback=None):
-		rid = self.id
-		pkt = self._rconpacket(self.id, type, cmd)
-		if callback is not None:
-			self.rconcallbacks[self.id] = callback
+		qcmd = self.id, self._rconpacket(self.id, type, cmd), callback
 		self.id += 1
-		self.log.protocol('Sending RCON packet: ' + binascii.hexlify(pkt).decode('utf-8'))
-		self.transport.write(pkt)
-		self.log.protocol('Parsed RCON packet: ' + str(self._rcondecode(pkt)))
-		return rid
+
+		self.log.protocol('Queued RCON packet: ' + binascii.hexlify(qcmd[1]).decode('utf-8'))
+		self.rconqueue.put(qcmd)
+
+		self._sendnextcmd()
+
+		return qcmd[0]
+
+	def _sendnextcmd(self):
+		if self.rconwaitid >= 0:
+			return
+		if self.rconqueue.empty():
+			return
+
+		qcmd = self.rconqueue.get()
+		self.rconwaitid = qcmd[0]
+
+		if qcmd[2] is not None:
+			self.rconcallbacks[qcmd[0]] = qcmd[2]
+		self.log.protocol('Sending RCON packet: ' + binascii.hexlify(qcmd[1]).decode('utf-8'))
+		self.transport.write(qcmd[1])
+		self.log.protocol('Parsed RCON packet: ' + str(self._rcondecode(qcmd[1])))
+
+		return
 
 	def _rconpacket(self, id=0, type=0, payload=None):
 		pkt = struct.pack('<ii', id, type)
