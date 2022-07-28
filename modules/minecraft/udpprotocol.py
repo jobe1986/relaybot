@@ -56,10 +56,10 @@ class MCUDPProtocol(asyncio.Protocol):
 				'PLAYER_DISCONNECT': [re.compile('^(?P<name>.+?) (?P<message>(?:\\(formerly known as .+?\\) )?left the game)$')],
 				'WHITELIST_FAIL': [re.compile('^com.mojang.authlib.GameProfile.+?id=(?P<uuid>[-a-f0-9]+),.*?name=(?P<name>.+?),.*? \\(/(?P<ip>.+?):(?P<port>[0-9]+?)\\) lost connection: You are not white-listed on this server!.*?$')],
 				'MESSAGE': [
-					re.compile('^(?P<raw><(?P<name>.+?)> (?P<message>.*?))$'),
-					re.compile('^(?P<raw>\\[(?P<name>[^ ]+?)\\] (?P<message>.*?))$')
+					re.compile('^(?P<raw>(?:\\[Not Secure\\] )?<(?P<name>.+?)> (?P<message>.*?))$'),
+					re.compile('^(?P<raw>(?:\\[Not Secure\\] )?\\[(?P<name>[^ ]+?)\\] (?P<message>.*?))$')
 					],
-				'ACTION': [re.compile('^(?P<raw>\\* (?P<name>.+?) (?P<message>.*?))$')],
+				'ACTION': [re.compile('^(?P<raw>(?:\\[Not Secure\\] )?\\* (?P<name>.+?) (?P<message>.*?))$')],
 				'ADVANCEMENT': [
 					re.compile('^(?P<name>.+?) (?P<message>has (?:lost|just earned) the achievement \\[(?P<advancement>.*?)\\])$'),
 					re.compile('^(?P<name>.+?) (?P<message>has made the advancement \\[(?P<advancement>.*?)\\])$'),
