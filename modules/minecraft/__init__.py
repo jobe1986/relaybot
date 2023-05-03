@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 
-# RelayBot - Simple VNC Relay Service, modules/minecraft/__init__.py
+# RelayBot - Simple Relay Service, modules/minecraft/__init__.py
 #
-# Copyright (C) 2021 Matthew Beeching
+# Copyright (C) 2023 Matthew Beeching
 #
 # This file is part of RelayBot.
 #

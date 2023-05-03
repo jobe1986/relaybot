@@ -1,9 +1,9 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
 
-# RelayBot - Simple VNC Relay Service, run.py
+# RelayBot - Simple Relay Service, run.py
 #
-# Copyright (C) 2021 Matthew Beeching
+# Copyright (C) 2023 Matthew Beeching
 #
 # This file is part of RelayBot.
 #
