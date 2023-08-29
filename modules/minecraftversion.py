@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# RelayBot - Simple Relay Service, modules/minecraftircwhitelist.py
+# RelayBot - Simple Relay Service, modules/minecraftversion.py
 #
 # Copyright (C) 2023 Matthew Beeching
 #
