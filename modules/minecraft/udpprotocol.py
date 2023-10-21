@@ -302,7 +302,7 @@ async def connectclient(loop, conf, module):
 	try:
 		serv = '[' + conf['udp']['host'] + ']:' + conf['udp']['port']
 		log.info('Creating UDP listener ' + conf['name'] + ' listening on ' + serv)
-		await loop.create_datagram_endpoint(lambda: MCUDPProtocol(loop, conf, module), (conf['udp']['host'], conf['udp']['port']), reuse_address=True, reuse_port=True)
+		await loop.create_datagram_endpoint(lambda: MCUDPProtocol(loop, conf, module), (conf['udp']['host'], conf['udp']['port']), reuse_port=True)
 	except Exception as e:
 		log.warning('Exception occurred attempting to create UDP listener ' + conf['name'] + ': ' + str(e))
 		log.info('Retrying in 30 seconds')
