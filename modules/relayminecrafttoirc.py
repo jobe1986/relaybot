@@ -91,7 +91,7 @@ def shutdown(loop):
 def handle_event(loop, module, sender, protocol, event, data):
 	global log
 	global configs
-	
+
 	events = [
 		'PLAYER_CONNECT',
 		'PLAYER_DISCONNECT',
