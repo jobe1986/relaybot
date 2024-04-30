@@ -54,7 +54,9 @@ class MCUDPProtocol(asyncio.Protocol):
 				'PLAYER_IP': [re.compile('^(?P<name>.+?)\\[/(?P<ip>.+?):(?P<port>[0-9]+?)\\] logged in with entity id.*?$')],
 				'PLAYER_CONNECT': [re.compile('^(?P<name>.+?) (?P<message>(?:\\(formerly known as .+?\\) )?joined the game)$')],
 				'PLAYER_DISCONNECT': [re.compile('^(?P<name>.+?) (?P<message>(?:\\(formerly known as .+?\\) )?left the game)$')],
-				'WHITELIST_FAIL': [re.compile('^com.mojang.authlib.GameProfile.+?id=(?P<uuid>[-a-f0-9]+),.*?name=(?P<name>.+?),.*? \\(/(?P<ip>.+?):(?P<port>[0-9]+?)\\) lost connection: You are not white-listed on this server!.*?$')],
+				'WHITELIST_FAIL': [
+					re.compile('^(?P<name>.+?) \\(/(?P<ip>.+?):(?P<port>[0-9]+?)\\) lost connection: You are not white-listed on this server!$'),
+					],
 				'MESSAGE': [
 					re.compile('^(?:\\[Not Secure\\] )?(?P<raw><(?P<name>.+?)> (?P<message>.*?))$'),
 					re.compile('^(?:\\[Not Secure\\] )?(?P<raw>\\[(?P<name>[^ ]+?)\\] (?P<message>.*?))$')
@@ -284,6 +286,12 @@ class MCUDPProtocol(asyncio.Protocol):
 								ipmatch = self.ipre.match(evt['ip'])
 								if ipmatch:
 									evt['ip'] = ipmatch.group('ip')
+							elif event == 'WHITELIST_FAIL':
+								uuid = playeruuidfromname(self.config['name'], evt['name'])
+								if uuid:
+									evt['uuid'] = uuid
+								else:
+									evt['uuid'] = '00000000-0000-0000-0000-000000000000'
 							self.log.debug('Event "' + event + '": ' + str(evt))
 
 							if event in self.msgcb:
