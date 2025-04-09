@@ -40,18 +40,6 @@ LOG_NOTSET = logging.NOTSET
 
 levels = {'DEBUG': LOG_DEBUG, 'PROTOCOL': LOG_PROTOCOL, 'INFO': LOG_INFO, 'WARNING': LOG_WARNING, 'ERROR': LOG_ERROR, 'CRITICAL': LOG_CRITICAL}
 
-def logprotocol(self, message, *args, **kws):
-	if self.isEnabledFor(LOG_PROTOCOL):
-		self._log(LOG_PROTOCOL, message, args, **kws)
-
-def getchildobj(self, suffix):
-	if self.root is not self:
-		suffix = '#'.join((self.name, suffix))
-	return self.manager.getLogger(suffix)
-
-logging.Logger.protocol = logprotocol
-logging.Logger.getChildObj = getchildobj
-
 root = logging.getLogger(None)
 log = logging.getLogger('relaybot')
 mylog = log.getChild(__name__)
@@ -66,6 +54,17 @@ def leveltoname(level):
 
 class UTCFormatter(logging.Formatter):
 	converter = time.gmtime
+
+# Relay Bot Logger Class
+class RBLogger(logging.Logger):
+	def protocol(self, message, *args, **kws):
+		if self.isEnabledFor(LOG_PROTOCOL):
+			self._log(LOG_PROTOCOL, message, args, **kws)
+
+	def getChildObj(self, suffix):
+		if self.root is not self:
+			suffix = '#'.join((self.name, suffix))
+		return self.manager.getLogger(suffix)
 
 confs = {'outputs': []}
 
@@ -156,6 +155,8 @@ def applyconfig(loop, args):
 def init_logging(args):
 	global rblog, levels, root, defloghandler, deflogformatter, cliargs
 	cliargs = args
+
+	logging.setLoggerClass(RBLogger)
 
 	for name in levels:
 		logging.addLevelName(levels[name], name)
