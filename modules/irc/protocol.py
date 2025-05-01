@@ -44,7 +44,7 @@ class IRCClientProtocol(asyncio.Protocol):
 		self.pingcheck = False
 
 		self.rejoindelay = 30
-		self.pingfrequency = 30
+		self.pingfrequency = 60
 
 		self.chans = config['channels']
 		self.user = config['user']
