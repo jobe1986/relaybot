@@ -41,8 +41,10 @@ class IRCClientProtocol(asyncio.Protocol):
 		self.hasperformed = False
 		self.errormsg = None
 		self.capendhandle = None
+		self.pingcheck = False
 
 		self.rejoindelay = 30
+		self.pingfrequency = 30
 
 		self.chans = config['channels']
 		self.user = config['user']
@@ -57,6 +59,7 @@ class IRCClientProtocol(asyncio.Protocol):
 		self.haswhox = False
 
 		self.rejointimer = None
+		self.pingtimer = None
 		self.timers = []
 
 		self.handlers = {
@@ -92,6 +95,7 @@ class IRCClientProtocol(asyncio.Protocol):
 	def connection_made(self, transport):
 		self.transport = transport
 		self.log.info('Connection established')
+		self._resetping()
 		self._send('CAP', 'LS')
 		if self.config['server']['password'] is not None:
 			self._send('PASS', self.config['server']['password'])
@@ -127,6 +131,8 @@ class IRCClientProtocol(asyncio.Protocol):
 	def data_received(self, data):
 		lines = data.decode('utf-8').replace('\r', '\n').split('\n')
 
+		self._resetping()
+
 		for line in lines:
 			if len(line) > 0:
 				self.log.protocol('Received line: ' + line)
@@ -139,9 +145,8 @@ class IRCClientProtocol(asyncio.Protocol):
 				#_modules.send_event(self.loop, self.module, self.config['name'], 'irc', 'IRC_RAW', msg)
 		return
 
-	def shutdown(self, loop):
-		self.isshutdown = True
-		self._send('QUIT', 'Shutting down')
+	def disconnect(self, reason):
+		self._send('QUIT', reason)
 		if self.transport:
 			self.transport.close()
 		for chan in self.chans:
@@ -161,6 +166,16 @@ class IRCClientProtocol(asyncio.Protocol):
 			except:
 				pass
 			self.rejointimer = None
+		if self.pingtimer:
+			try:
+				self.pingtimer.cancel()
+			except:
+				pass
+			self.pingtimer = None
+
+	def shutdown(self, loop):
+		self.isshutdown = True
+		self.disconnect('Shutting down')
 
 	def handle_event(self, loop, module, sender, protocol, event, data):
 		if event != 'IRC_SENDCMD':
@@ -502,6 +517,23 @@ class IRCClientProtocol(asyncio.Protocol):
 					self.log.debug('Event "' + event + '": ' + str(evt))
 
 					_modules.send_event(self.loop, self.module, self.config['name'], 'irc', event, evt)
+
+	def _resetping(self):
+		self.pingcheck = True
+		if self.pingtimer:
+			try:
+				self.pingtimer.cancel()
+			except:
+				pass
+		self.pingtimer = self.loop.call_later(self.pingfrequency, self._doping)
+
+	def _doping(self):
+		if self.pingcheck:
+			self._send('PING', 'CHECKCONN')
+			self.pingcheck = False
+			self.pingtimer = self.loop.call_later(self.pingfrequency, self._doping)
+		else:
+			self.disconnect('Ping Timeout')
 
 	def _capend(self):
 		self._send('CAP', 'END')
