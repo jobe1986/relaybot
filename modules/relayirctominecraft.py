@@ -138,7 +138,7 @@ def handle_event(loop, module, sender, protocol, event, data):
 
 		for part in filter(None, re.split('(https?://[^\s]+)', data['message'])):
 			if part[0:7] == 'http://' or part[0:8] == 'https://':
-				parts.append({'text': part, 'underlined': True, 'clickEvent': {'action': 'open_url', 'value': part}})
+				parts.append({'text': part, 'underlined': True, 'click_event': {'action': 'open_url', 'url': part}})
 			else:
 				parts.append(part)
 		text = json.dumps(parts)
