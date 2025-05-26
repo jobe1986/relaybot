@@ -33,7 +33,7 @@ def daemonize(args):
 	except:
 		pid = None
 
-	if pid:
+	if pid and pid != os.getpid():
 		log.error('PID file already exists, Is RelayBot already running?')
 		sys.exit(1)
 
