@@ -1,12 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<Configuration status="WARN" packages="net.minecraft,com.mojang">
+<Configuration status="WARN">
 	<Appenders>
 		<Console name="SysOut" target="SYSTEM_OUT">
 			<PatternLayout pattern="[%d{HH:mm:ss}] [%t/%level]: %msg{nolookups}%n" />
 		</Console>
-		<Queue name="ServerGuiConsole">
-			<PatternLayout pattern="[%d{HH:mm:ss} %level]: %msg{nolookups}%n" />
-		</Queue>
 		<RollingRandomAccessFile name="File" fileName="logs/latest.log" filePattern="logs/%d{yyyy-MM-dd}-%i.log.gz">
 			<PatternLayout pattern="[%d{HH:mm:ss}] [%t/%level]: %msg{nolookups}%n" />
 			<Policies>
@@ -14,6 +11,9 @@
 				<OnStartupTriggeringPolicy />
 			</Policies>
 		</RollingRandomAccessFile>
+		<Listener name="Tracy">
+			<PatternLayout pattern="(%F:%L): %msg{nolookups}%n"/>
+		</Listener>
 		<Socket name="Socket" host="127.0.0.1" port="25605" protocol="UDP">
 			<PatternLayout pattern="[%d{HH:mm:ss}] [%t/%level]: %msg{nolookups}%n" />
 		</Socket>
@@ -25,7 +25,7 @@
 			</filters>
 			<AppenderRef ref="SysOut"/>
 			<AppenderRef ref="File"/>
-			<AppenderRef ref="ServerGuiConsole"/>
+			<AppenderRef ref="Tracy"/>
 			<AppenderRef ref="Socket" />
 		</Root>
 	</Loggers>
