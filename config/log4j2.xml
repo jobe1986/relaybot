@@ -11,9 +11,6 @@
 				<OnStartupTriggeringPolicy />
 			</Policies>
 		</RollingRandomAccessFile>
-		<Listener name="Tracy">
-			<PatternLayout pattern="(%F:%L): %msg{nolookups}%n"/>
-		</Listener>
 		<Socket name="Socket" host="127.0.0.1" port="25605" protocol="UDP">
 			<PatternLayout pattern="[%d{HH:mm:ss}] [%t/%level]: %msg{nolookups}%n" />
 		</Socket>
@@ -25,7 +22,6 @@
 			</filters>
 			<AppenderRef ref="SysOut"/>
 			<AppenderRef ref="File"/>
-			<AppenderRef ref="Tracy"/>
 			<AppenderRef ref="Socket" />
 		</Root>
 	</Loggers>
