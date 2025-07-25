@@ -20,6 +20,7 @@
 # along with RelayBot.  If not, see <http://www.gnu.org/licenses/>.
 
 import core.logging as _logging
+import ssl
 
 log = _logging.log.getChild(__name__)
 
@@ -63,6 +64,22 @@ def loadconfig(config, module):
 				conf['server']['tls'] = True
 			else:
 				conf['server']['tls'] = False
+			if conf['server']['tls']:
+				tcert = None
+				tkey = None
+				if 'tlscert' in conf['server']:
+					tcert = conf['server']['tlscert']
+				if 'tlskey' in conf['server']:
+					tkey = conf['server']['tlskey']
+				conf['server']['tlscert'] = None
+				conf['server']['tlskey'] = None
+				try:
+					sctx = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+					sctx.load_cert_chain(tcert, tkey)
+					conf['server']['tlscert'] = tcert
+					conf['server']['tlskey'] = tkey
+				except:
+					pass
 		if not 'password' in conf['server']:
 			conf['server']['password'] = None
 		if conf['server']['password'] == '':

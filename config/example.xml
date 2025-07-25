@@ -53,7 +53,7 @@
 		IRC module config:
 	-->
 	<irc name="IRCNetwork">
-		<server host="irc.server.tld" port="6697" tls="true" password="" />
+		<server host="irc.server.tld" port="6697" tls="true" password="" tlscert="" tlskey=""/>
 		<user nick="RelayBot" user="RelayBot" gecos="Simple Relay Bot" />
 		<channel name="#minecraft" />
 	</irc>

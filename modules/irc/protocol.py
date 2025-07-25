@@ -21,8 +21,7 @@
 
 import core.logging as _logging
 import core.modules as _modules
-import asyncio
-import re
+import asyncio, re, ssl
 
 log = _logging.log.getChild(__name__)
 
@@ -91,6 +90,11 @@ class IRCClientProtocol(asyncio.Protocol):
 		}
 
 		clients[self.config['name']] = self
+
+		for chan in self.chans:
+			self.chans[chan]['joined'] = False
+			self.chans[chan]['users'] = {}
+			self.chans[chan]['jointimer'] = None
 
 	def connection_made(self, transport):
 		self.transport = transport
@@ -709,7 +713,16 @@ async def connectclient(loop, conf, module):
 			serv = serv + '+'
 		serv = serv + str(conf['server']['port'])
 		log.info('Connecting IRC client ' + conf['name'] + ' to ' + serv)
-		await loop.create_connection(lambda: IRCClientProtocol(loop, conf, module), conf['server']['host'], conf['server']['port'], ssl=conf['server']['tls'])
+		tls = conf['server']['tls']
+		if tls:
+			if conf['server']['tlscert']:
+				try:
+					tls = ssl.create_default_context()
+					tls.load_cert_chain(conf['server']['tlscert'], conf['server']['tlskey'])
+				except Exception as e:
+					log.warning('Exception occurred attempting to load client tls certificate or key for IRC client  ' + conf['name'] + ': ' + str(e))
+					tls = True
+		await loop.create_connection(lambda: IRCClientProtocol(loop, conf, module), conf['server']['host'], conf['server']['port'], ssl=tls)
 	except Exception as e:
 		log.warning('Exception occurred attempting to connect IRC client ' + conf['name'] + ': ' + str(e))
 		log.info('Reconnecting in 30 seconds')
