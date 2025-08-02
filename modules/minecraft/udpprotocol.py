@@ -269,40 +269,42 @@ class MCUDPProtocol(asyncio.Protocol):
 	def _handle_msg(self, msg):
 		global players
 
-		for thread in self.msgre:
-			if msg['thread'] == thread:
-				for event in self.msgre[thread]:
-					for rec in self.msgre[thread][event]:
-						match = rec.match(msg['message'])
-						if match:
-							evt = match.groupdict()
-							if event == 'PLAYER_CONNECT' or event == 'PLAYER_DISCONNECT':
-								uuid = playeruuidfromname(self.config['name'], evt['name'])
-								if uuid:
-									evt['ip'] = players[self.config['name']][uuid]['ip']
-									evt['port'] = players[self.config['name']][uuid]['port']
-									evt['uuid'] = uuid
-							elif event == 'PLAYER_IP':
-								ipmatch = self.ipre.match(evt['ip'])
-								if ipmatch:
-									evt['ip'] = ipmatch.group('ip')
-							elif event == 'WHITELIST_FAIL':
-								uuid = playeruuidfromname(self.config['name'], evt['name'])
-								if uuid:
-									evt['uuid'] = uuid
-								else:
-									evt['uuid'] = '00000000-0000-0000-0000-000000000000'
-							self.log.debug('Event "' + event + '": ' + str(evt))
+		if not msg['thread'] in self.msgre:
+			return
 
-							if event in self.msgcb:
-								if self.msgcb[event]:
-									self.log.debug('Calling callback for event "' + event + '"')
-									self.msgcb[event](evt)
+		thread = msg['thread']
+		for event in self.msgre[thread]:
+			for rec in self.msgre[thread][event]:
+				match = rec.match(msg['message'])
+				if match:
+					if event == 'MESSAGE' and msg['level'] == 'WARN':
+						break
+					evt = match.groupdict()
+					if event == 'PLAYER_CONNECT' or event == 'PLAYER_DISCONNECT':
+						uuid = playeruuidfromname(self.config['name'], evt['name'])
+						if uuid:
+							evt['ip'] = players[self.config['name']][uuid]['ip']
+							evt['port'] = players[self.config['name']][uuid]['port']
+							evt['uuid'] = uuid
+					elif event == 'PLAYER_IP':
+						ipmatch = self.ipre.match(evt['ip'])
+						if ipmatch:
+							evt['ip'] = ipmatch.group('ip')
+					elif event == 'WHITELIST_FAIL':
+						uuid = playeruuidfromname(self.config['name'], evt['name'])
+						if uuid:
+							evt['uuid'] = uuid
+						else:
+							evt['uuid'] = '00000000-0000-0000-0000-000000000000'
+					self.log.debug('Event "' + event + '": ' + str(evt))
 
-							_modules.send_event(self.loop, self.module, self.config['name'], 'udp', event, evt)
-							break
-			else:
-				continue
+					if event in self.msgcb:
+						if self.msgcb[event]:
+							self.log.debug('Calling callback for event "' + event + '"')
+							self.msgcb[event](evt)
+
+					_modules.send_event(self.loop, self.module, self.config['name'], 'udp', event, evt)
+					break
 
 		return
 
