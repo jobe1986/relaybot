@@ -119,6 +119,8 @@ class MCUDPProtocol(asyncio.Protocol):
 					re.compile('^(?P<message>(?P<name>[^ ]*?) tried to swim in lava to escape .*?)$'),
 					re.compile('^(?P<message>(?P<name>[^ ]*?) was struck by lightning)$'),
 					re.compile('^(?P<message>(?P<name>[^ ]*?) was struck by lightning while fighting .*?)$'),
+					re.compile('^(?P<message>(?P<name>[^ ]*?) was smashed by .*?)$'),
+					re.compile('^(?P<message>(?P<name>[^ ]*?) was smashed by .*? with .*?)$'),
 					re.compile('^(?P<message>(?P<name>[^ ]*?) was killed by magic)$'),
 					re.compile('^(?P<message>(?P<name>[^ ]*?) was killed by magic while trying to escape .*?)$'),
 					re.compile('^(?P<message>(?P<name>[^ ]*?) was slain by .*?)$'),
