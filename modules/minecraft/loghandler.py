@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# RelayBot - Simple Relay Service, modules/minecraft/udpprotocol.py
+# RelayBot - Simple Relay Service, modules/minecraft/loghandler.py
 #
 # Copyright (C) 2023 Matthew Beeching
 #
@@ -28,10 +28,11 @@ log = _logging.log.getChild(__name__)
 players = {}
 
 class LogHandler:
-	def __init__(self, loop, config, module):
+	def __init__(self, loop, config, module, prot):
 		self.loop = loop
 		self.config = config
 		self.module = module
+		self.prot = prot
 		self.log = log.getChildObj(self.config['name'])
 
 		players[self.config['name']] = {}
@@ -204,7 +205,7 @@ class LogHandler:
 							self.log.debug('Calling callback for event "' + event + '"')
 							self.msgcb[event](evt)
 
-					_modules.send_event(self.loop, self.module, self.config['name'], 'udp', event, evt)
+					_modules.send_event(self.loop, self.module, self.config['name'], self.prot, event, evt)
 					break
 
 		return
@@ -229,7 +230,7 @@ class LogHandler:
 				for uuid in players[self.config['name']]:
 					if players[self.config['name']][uuid]['online']:
 						evt = {'name': players[self.config['name']][uuid]['name'], 'uuid': uuid, 'ip': players[self.config['name']][uuid]['ip'], 'port': players[self.config['name']][uuid]['port'], 'message': 'left the game'}
-						_modules.send_event(self.loop, self.module, self.config['name'], 'udp', 'PLAYER_DISCONNECT', evt)
+						_modules.send_event(self.loop, self.module, self.config['name'], self.prot, 'PLAYER_DISCONNECT', evt)
 						self.e_player_disconnect(evt)
 
 	def e_player_ip(self, evt):

@@ -74,6 +74,20 @@
 		-->
 		<rcon host="127.0.0.1" port="25575" password="password" />
 		<!--
+			The easiest method to receive messages from a Minecraft server is to read
+			the log file. The <logreader> option allows you to specify the path to the
+			log file to be read.
+
+			The log file lines MUST be formatted to match this:
+			"[%d{HH:mm:ss}] [%t/%level]: %msg{nolookups}%n"
+
+			An example of a valid message format:
+			"[21:54:20] [Server thread/INFO]: Jobe joined the game"
+
+			NOTE: if you use the <logreader> option, the <udp> option will be ignored.
+		-->
+		<logreader file="/home/user/server/logs/latest.log" />
+		<!--
 			This module requires your minecraft server to be configured to relay log
 			messages to this bot via UDP using the log4j2 PatternLayout pattern:
 			"[%d{HH:mm:ss}] [%t/%level]: %msg{nolookups}%n"

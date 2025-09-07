@@ -38,7 +38,7 @@ def loadconfig(config, module):
 			continue
 
 		name = mccfg.attrib['name']
-		conf = {'name': name, 'rcon': None, 'udp': None}
+		conf = {'name': name, 'rcon': None, 'udp': None, 'logreader': None}
 
 		rcon = mccfg.findall('./rcon')
 		if rcon:
@@ -68,9 +68,22 @@ def loadconfig(config, module):
 
 			conf['udp'] = udp
 
-		if not conf['rcon'] and not conf['udp']:
-			log.warning('Minecraft client ' + name + ' requires at least an rcon or udp configuration')
+		logreader = mccfg.findall('./logreader')
+		if logreader:
+			logreader = logreader[0].attrib
+
+			if not 'file' in logreader:
+				log.warning('Minecraft client ' + name + ' Log Reader configuration missing file path')
+				continue
+
+			conf['logreader'] = logreader
+
+		if not conf['rcon'] and not conf['udp'] and not conf['logreader']:
+			log.warning('Minecraft client ' + name + ' requires at least an rcon, udp or logreader configuration')
 			continue
+		if conf['udp'] and conf['logreader']:
+			conf['udp'] = None
+			log.warning('Minecraft client ' + name + ' has both a udp and logreader config, using logreader')
 
 		configs[name] = conf
 		log.debug('Loaded config: ' + str(conf))
@@ -80,12 +93,15 @@ def applyconfig(loop, module):
 	global configs
 	global log
 
+	import modules.minecraft.logprotocol as _logprotocol
 	import modules.minecraft.udpprotocol as _udpprotocol
 	import modules.minecraft.rconprotocol as _rconprotocol
 
 	for name in configs:
 		conf = configs[name]
 		log.info('Creating Minecraft client ' + name)
+		if conf['logreader'] is not None:
+			_logprotocol.createclient(loop, conf, module)
 		if conf['udp'] is not None:
 			_udpprotocol.createclient(loop, conf, module)
 		if conf['rcon'] is not None:
@@ -95,8 +111,12 @@ def applyconfig(loop, module):
 def shutdown(loop):
 	global log
 
+	import modules.minecraft.logprotocol as _logprotocol
 	import modules.minecraft.udpprotocol as _udpprotocol
 	import modules.minecraft.rconprotocol as _rconprotocol
+
+	for cli in _logprotocol.clients:
+		_logprotocol.clients[cli].shutdown(loop)
 
 	for cli in _udpprotocol.clients:
 		_udpprotocol.clients[cli].shutdown(loop)
@@ -107,8 +127,15 @@ def shutdown(loop):
 def handle_event(loop, module, sender, protocol, event, data):
 	global log
 
+	import modules.minecraft.logprotocol as _logprotocol
 	import modules.minecraft.udpprotocol as _udpprotocol
 	import modules.minecraft.rconprotocol as _rconprotocol
+
+	for cli in _logprotocol.clients:
+		if module.name == 'minecraft' and protocol == 'udp' and sender == cli:
+			continue
+		log.debug('Sending event "' + event + '" to client "' + cli + '" logreader')
+		_logprotocol.clients[cli].handle_event(loop, module, sender, protocol, event, data)
 
 	for cli in _udpprotocol.clients:
 		if module.name == 'minecraft' and protocol == 'udp' and sender == cli:
@@ -125,11 +152,20 @@ def handle_event(loop, module, sender, protocol, event, data):
 def handle_event_target(loop, target, module, sender, protocol, event, data):
 	global log
 
+	import modules.minecraft.logprotocol as _logprotocol
 	import modules.minecraft.udpprotocol as _udpprotocol
 	import modules.minecraft.rconprotocol as _rconprotocol
 
 	if 'module' in target and target['module'] != 'minecraft':
 		return
+
+	for cli in _logprotocol.clients:
+		if module.name == 'minecraft' and protocol == 'udp' and sender == cli:
+			continue
+		if 'name' in target and target['name'] != cli:
+			continue
+		log.debug('Sending event "' + event + '" to client "' + cli + '" logreader')
+		_logprotocol.clients[cli].handle_event(loop, module, sender, protocol, event, data)
 
 	for cli in _udpprotocol.clients:
 		if module.name == 'minecraft' and protocol == 'udp' and sender == cli:

@@ -92,7 +92,7 @@ class MCUDPProtocol(asyncio.Protocol):
 async def connectclient(loop, conf, module):
 	try:
 		serv = '[' + conf['udp']['host'] + ']:' + conf['udp']['port']
-		handler = LogHandler(loop, conf, module)
+		handler = LogHandler(loop, conf, module, 'udp')
 		log.info('Creating UDP listener ' + conf['name'] + ' listening on ' + serv)
 		await loop.create_datagram_endpoint(lambda: MCUDPProtocol(loop, conf, module, handler), (conf['udp']['host'], conf['udp']['port']), reuse_port=True)
 	except Exception as e:
