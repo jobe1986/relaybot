@@ -1,3 +1,4 @@
 config/config.xml
+config/*.pem
 *__pycache__
 relaybot.pid
