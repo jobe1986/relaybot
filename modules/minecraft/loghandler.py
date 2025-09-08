@@ -218,7 +218,6 @@ class LogHandler:
 			if event == 'PLAYER_CONNECT':
 				if not data['uuid'] in players[self.config['name']]:
 					players[self.config['name']][data['uuid']] = {'name': data['name'], 'ip': data['ip'], 'port': data['port'], 'online': True}
-					log.debug('Players: ' + str(players))
 				elif not players[self.config['name']][data['uuid']]['online']:
 					players[self.config['name']][data['uuid']]['name'] = data['name']
 					players[self.config['name']][data['uuid']]['ip'] = data['ip']
@@ -241,7 +240,6 @@ class LogHandler:
 			players[self.config['name']][uuid]['ip'] = evt['ip']
 			players[self.config['name']][uuid]['port'] = evt['port']
 			log.debug('Updated player "' + uuid + '": ' + str(players[self.config['name']][uuid]))
-		log.debug('Players: ' + str(players))
 
 	def e_player_uuid(self, evt):
 		global players
@@ -251,7 +249,6 @@ class LogHandler:
 
 		players[self.config['name']][evt['uuid']]['name'] = evt['name']
 		log.debug('Cached player "' + evt['uuid'] + '": ' + str(players[self.config['name']][evt['uuid']]))
-		log.debug('Players: ' + str(players))
 
 	def e_player_connect(self, evt):
 		global players
@@ -259,7 +256,6 @@ class LogHandler:
 		uuid = playeruuidfromname(self.config['name'], evt['name'])
 		if uuid:
 			players[self.config['name']][uuid]['online'] = True
-		log.debug('Players: ' + str(players))
 
 	def e_player_disconnect(self, evt):
 		global players
@@ -267,7 +263,6 @@ class LogHandler:
 		uuid = playeruuidfromname(self.config['name'], evt['name'])
 		if uuid:
 			players[self.config['name']][uuid]['online'] = False
-		log.debug('Players: ' + str(players))
 
 def playeruuidfromname(conf, name):
 	global players
