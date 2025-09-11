@@ -51,9 +51,9 @@ class MCLogProtocol(asyncio.Protocol):
 		global clients
 
 		if not exc is None:
-			self.log.info('Lost Log Reader connection: ' + str(exc))
+			self.log.info('Connection lost to log reader connection: ' + str(exc))
 		else:
-			self.log.info('Lost Log Reader connection')
+			self.log.info('Connection lost to log reader connection')
 		if self.config['name'] in clients:
 			del clients[self.config['name']]
 
@@ -80,9 +80,13 @@ class MCLogProtocol(asyncio.Protocol):
 				self.log.warning('Unable to parse Log message')
 
 	def pipe_connection_lost(self, fd, exc):
+		if self.isshutdown:
+			return
 		self.connection_lost(exc)
 
 	def process_exited(self):
+		if self.isshutdown:
+			return
 		self.connection_lost(None)
 
 	def shutdown(self, loop):
@@ -98,7 +102,6 @@ async def connectclient(loop, conf, module):
 		file = conf['logreader']['file']
 		handler = LogHandler(loop, conf, module, 'log')
 		log.info('Creating Log Reader ' + conf['name'] + ' reading from ' + file)
-		#await loop.create_datagram_endpoint(lambda: MCUDPProtocol(loop, conf, module, handler), (conf['udp']['host'], conf['udp']['port']), reuse_port=True)
 		await loop.subprocess_exec(lambda: MCLogProtocol(loop, conf, module, handler), 'tail', '-n 0', '-F', file)
 	except Exception as e:
 		log.warning('Exception occurred attempting to create Log Reader ' + conf['name'] + ': ' + str(e))
