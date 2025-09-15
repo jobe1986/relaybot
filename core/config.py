@@ -119,15 +119,15 @@ def getattrs(node, log, attrs={}):
 					val = attrs[key]['def']
 				else:
 					log.error('Error converting attribute ' + key + ' to type ' + type + ': ' + str(e))
-					continue
+					return None
 			if 'vals' in attrs[key]:
 				if not val in attrs[key]['vals']:
 					log.error('Invalid value "' + val + '" for attribute "' + key + '" in ' + node.tag + ' element')
-					continue
+					return None
 			if 'regex' in attrs[key]:
 				if not attrs[key]['regex'].match(val):
 					log.error('Invalid value "' + val + '" for attribute "' + key + '" in ' + node.tag + ' element')
-					continue
+					return None
 
 		ret[key] = val
 

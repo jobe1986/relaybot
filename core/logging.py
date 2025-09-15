@@ -87,6 +87,9 @@ def loadconfig(conf, args):
 	for out in outs:
 		attrs = _config.getattrs(out, mylog, logoutschema)
 
+		if attrs is None:
+			continue
+
 		outconf = {'type': attrs['type'].lower(), 'path': None, 'rollover': None, 'level': LOG_INFO}
 
 		outconf['level'] = levels[attrs['level'].upper()]
