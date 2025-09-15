@@ -2,7 +2,7 @@
 
 # RelayBot - Simple Relay Service, core/config.py
 #
-# Copyright (C) 2023 Matthew Beeching
+# Copyright (C) 2025 Matthew Beeching
 #
 # This file is part of RelayBot.
 #
