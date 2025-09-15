@@ -9,9 +9,11 @@
 		Runtime options:
 			debug: enables debug logging
 			nofork: prevents the bot forking into the background
+			pidfile: specifies the path to the PID file
 	-->
 	<!-- <debug /> -->
 	<!-- <nofork /> -->
+	<!-- <pidfile file="relaybot.pid" /> -->
 
 	<!--
 		Modules config:

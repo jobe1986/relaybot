@@ -40,7 +40,6 @@ def parse_args():
 	parser.add_argument('-a', '--asynciodebug', help=argparse.SUPPRESS, action='store_true', dest='asynciodebug')
 
 	args = parser.parse_args()
-	#args.asynciodebug = False
 
 	if os.name == 'nt':
 		args.nofork = True

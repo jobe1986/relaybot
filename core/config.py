@@ -84,6 +84,11 @@ def checkoverrides(args):
 		nfconf = config.findall('nofork')
 		if len(nfconf) > 0:
 			args.nofork = True
+
+		pconf = config.findall('pidfile')
+		if len(pconf) > 0:
+			attrs = getattrs(pconf[0], log, {'file': {'type': 'string', 'def': 'relaybot.pid'}})
+			args.pidfile = attrs['file']
 	except Exception as e:
 		log.error('Error checking configuration for debug mode: ' + str(e))
 
