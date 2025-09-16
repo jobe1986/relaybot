@@ -19,7 +19,7 @@
 # You should have received a copy of the GNU General Public License
 # along with RelayBot.  If not, see <http://www.gnu.org/licenses/>.
 
-import logging, logging.handlers, sys, time, re, os
+import logging, logging.handlers, sys, time, re, os, json
 
 #from core.config import getattrs
 
@@ -107,7 +107,7 @@ def loadconfig(conf, args):
 
 		oc2 = outconf.copy()
 		oc2['level'] = leveltoname(oc2['level'])
-		mylog.debug('Found logging output: ' + str(oc2))
+		mylog.debug('Found logging output: ' + json.dumps(oc2))
 		confs['outputs'].append(outconf)
 
 	return True
