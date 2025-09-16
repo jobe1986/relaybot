@@ -106,6 +106,14 @@ def getattrs(node, log, attrs={}):
 			try:
 				if type == TYPE_INT:
 					val = int(val)
+					if 'min' in attrs[key]:
+						if val < attrs[key]['min']:
+							log.warning('Invalid value "' + val + '" for attribute "' + key + '" in ' + node.tag + ' element')
+							return None
+					if 'max' in attrs[key]:
+						if val > attrs[key]['max']:
+							log.warning('Invalid value "' + val + '" for attribute "' + key + '" in ' + node.tag + ' element')
+							return None
 				elif type == TYPE_FLOAT:
 					val = float(val)
 				elif type == TYPE_BOOL:
@@ -129,6 +137,9 @@ def getattrs(node, log, attrs={}):
 					log.error('Invalid value "' + val + '" for attribute "' + key + '" in ' + node.tag + ' element')
 					return None
 
+		if val == '':
+			if 'def' in attrs[key]:
+				val = attrs[key]['def']
 		ret[key] = val
 
 	req = []
