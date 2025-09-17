@@ -26,12 +26,12 @@ import importlib
 
 _log = _logging.log.getChild(__name__)
 
-mods = {}
+_mods = {}
 
 def loadmod(name):
-	global mods
+	global _mods
 
-	if name in mods:
+	if name in _mods:
 		_log.warning('Unable to load module ' + name + ': already loaded')
 		return False
 
@@ -43,12 +43,12 @@ def loadmod(name):
 		_log.error('Error loading module ' + name + ': ' + str(e))
 		return False
 
-	mods[name] = m
+	_mods[name] = m
 	_log.debug('Loaded module ' + name)
 	return m
 
 def loadconfig(config):
-	global mods
+	global _mods
 
 	modcfgs = config.findall('module')
 
@@ -60,8 +60,10 @@ def loadconfig(config):
 
 		m = loadmod(name)
 
-	for name in mods:
-		m = mods[name]
+	_log.debug('Modules loaded: ' + ', '.join(_mods.keys()))
+
+	for name in _mods:
+		m = _mods[name]
 		if m != None:
 			if hasattr(m, 'loadconfig'):
 				cfg = config.findall(name)
@@ -70,23 +72,23 @@ def loadconfig(config):
 	return True
 
 def getmodule(name):
-	global mods
+	global _mods
 
-	if name in mods:
-		return mods[name]
+	if name in _mods:
+		return _mods[name]
 	return None
 
 def applyconfig(loop):
-	global mods
+	global _mods
 
-	for name in mods:
-		if hasattr(mods[name], 'applyconfig'):
+	for name in _mods:
+		if hasattr(_mods[name], 'applyconfig'):
 			_log.debug('Applying configuration for module ' + name)
-			mods[name].applyconfig(loop, mods[name])
+			_mods[name].applyconfig(loop, _mods[name])
 
 def shutdown(loop):
-	global mods
-	for name in mods:
-		if hasattr(mods[name], 'shutdown'):
+	global _mods
+	for name in _mods:
+		if hasattr(_mods[name], 'shutdown'):
 			_log.debug('Shutting down module ' + name)
-			mods[name].shutdown(loop)
+			_mods[name].shutdown(loop)
