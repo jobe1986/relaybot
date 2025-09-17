@@ -45,7 +45,6 @@ levels = {'DEBUG': LOG_DEBUG, 'PROTOCOL': LOG_PROTOCOL, 'INFO': LOG_INFO, 'WARNI
 root = logging.getLogger(None)
 log = logging.getLogger('relaybot')
 mylog = log.getChild(__name__)
-args = None
 
 _config = None
 
