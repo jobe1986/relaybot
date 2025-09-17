@@ -44,7 +44,7 @@ levels = {'DEBUG': LOG_DEBUG, 'PROTOCOL': LOG_PROTOCOL, 'INFO': LOG_INFO, 'WARNI
 
 root = logging.getLogger(None)
 log = logging.getLogger('relaybot')
-mylog = log.getChild(__name__)
+_log = log.getChild(__name__)
 
 _config = None
 
@@ -84,7 +84,7 @@ def loadconfig(conf, args):
 	}
 
 	for out in outs:
-		attrs = _config.getattrs(out, mylog, logoutschema)
+		attrs = _config.getattrs(out, _log, logoutschema)
 
 		if attrs is None:
 			continue
@@ -95,7 +95,7 @@ def loadconfig(conf, args):
 
 		if outconf['type'] == 'file':
 			if attrs['path'] is None:
-				mylog.error('Missing path attribute in file logging output')
+				_log.error('Missing path attribute in file logging output')
 				continue
 			outconf['path'] = out.attrib['path']
 
@@ -106,7 +106,7 @@ def loadconfig(conf, args):
 
 		oc2 = outconf.copy()
 		oc2['level'] = leveltoname(oc2['level'])
-		mylog.debug('Found logging output: ' + json.dumps(oc2))
+		_log.debug('Found logging output: ' + json.dumps(oc2))
 		confs['outputs'].append(outconf)
 
 	return True
@@ -149,7 +149,7 @@ def applyconfig(loop, args):
 
 	if removedef:
 		root.removeHandler(defloghandler)
-		mylog.debug('Default logging handler no longer needed')
+		_log.debug('Default logging handler no longer needed')
 
 def init_logging(args, configns):
 	global rblog, levels, root, defloghandler, deflogformatter, cliargs, _config

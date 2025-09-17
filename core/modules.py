@@ -24,7 +24,7 @@ from collections import namedtuple
 import core.logging as _logging
 import importlib
 
-log = _logging.log.getChild(__name__)
+_log = _logging.log.getChild(__name__)
 
 mods = {}
 
@@ -32,7 +32,7 @@ def loadmod(name):
 	global mods
 
 	if name in mods:
-		log.warning('Unable to load module ' + name + ': already loaded')
+		_log.warning('Unable to load module ' + name + ': already loaded')
 		return False
 
 	try:
@@ -40,11 +40,11 @@ def loadmod(name):
 		importlib.invalidate_caches()
 		m.name = name
 	except Exception as e:
-		log.error('Error loading module ' + name + ': ' + str(e))
+		_log.error('Error loading module ' + name + ': ' + str(e))
 		return False
 
 	mods[name] = m
-	log.debug('Loaded module ' + name)
+	_log.debug('Loaded module ' + name)
 	return m
 
 def loadconfig(config):
@@ -54,7 +54,7 @@ def loadconfig(config):
 
 	for mod in modcfgs:
 		if not 'name' in mod.attrib:
-			log.warning('Missing name attribute for module')
+			_log.warning('Missing name attribute for module')
 			continue
 		name = mod.attrib['name']
 
@@ -81,12 +81,12 @@ def applyconfig(loop):
 
 	for name in mods:
 		if hasattr(mods[name], 'applyconfig'):
-			log.debug('Applying configuration for module ' + name)
+			_log.debug('Applying configuration for module ' + name)
 			mods[name].applyconfig(loop, mods[name])
 
 def shutdown(loop):
 	global mods
 	for name in mods:
 		if hasattr(mods[name], 'shutdown'):
-			log.debug('Shutting down module ' + name)
+			_log.debug('Shutting down module ' + name)
 			mods[name].shutdown(loop)
