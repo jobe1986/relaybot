@@ -19,8 +19,6 @@
 # You should have received a copy of the GNU General Public License
 # along with RelayBot.  If not, see <http://www.gnu.org/licenses/>.
 
-from collections import namedtuple
-
 import core.logging as _logging
 import importlib
 
