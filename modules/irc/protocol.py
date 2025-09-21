@@ -86,7 +86,8 @@ class IRCClientProtocol(asyncio.Protocol):
 			'account-notify': False,
 			'extended-join': False,
 			'multi-prefix': False,
-			'userhost-in-names': False
+			'userhost-in-names': False,
+			'cap-notify': False
 		}
 
 		clients[self.config['name']] = self
@@ -304,7 +305,8 @@ class IRCClientProtocol(asyncio.Protocol):
 				self.chans[chan]['users'][who]['account'] = account
 
 	def m_cap(self, msg):
-		if msg['params'][1] == 'LS':
+		verb = msg['params'][1]
+		if verb == 'LS' or verb == 'NEW':
 			if self.capendhandle is not None:
 				self.capendhandle.cancel()
 
@@ -316,8 +318,14 @@ class IRCClientProtocol(asyncio.Protocol):
 
 			self._send('CAP', 'REQ', ' '.join(req))
 
-			self.capendhandle = self.loop.call_later(2, self._capend)
-		elif msg['params'][1] == 'ACK':
+			if verb == 'LS':
+				self.capendhandle = self.loop.call_later(2, self._capend)
+		elif verb == 'DEL':
+			caps = msg['params'][-1].split(' ')
+			for cap in caps:
+				if cap in self.caps:
+					self.caps[cap] = False
+		elif verb == 'ACK':
 			caps = msg['params'][-1].split(' ')
 			for cap in caps:
 				if cap in self.caps:
