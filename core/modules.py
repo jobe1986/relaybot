@@ -26,7 +26,21 @@ _log = _logging.log.getChild(__name__)
 
 _mods = {}
 
-def loadmod(name):
+# Module class prototype
+class Module:
+	def __init__(self, loop, module):
+		return
+
+	def readconfig(self, config):
+		return
+
+	def applyconfig(self):
+		return
+
+	def shutdown(self):
+		return
+
+def loadmod(name, loop):
 	global _mods
 
 	if name in _mods:
@@ -37,15 +51,21 @@ def loadmod(name):
 		m = importlib.import_module('modules.' + name)
 		importlib.invalidate_caches()
 		m.name = name
+
+		if hasattr(m, 'Module'):
+			o = m.Module(loop, m)
+		else:
+			_log.error('Unable to load module ' + name + ': missing Module class definition')
+			return False
 	except Exception as e:
 		_log.error('Error loading module ' + name + ': ' + str(e))
 		return False
 
-	_mods[name] = m
+	_mods[name] = {'module': m, 'object': o}
 	_log.debug('Loaded module ' + name)
 	return m
 
-def loadconfig(config):
+def readconfig(config, loop):
 	global _mods
 
 	modcfgs = config.findall('module')
@@ -56,16 +76,15 @@ def loadconfig(config):
 			continue
 		name = mod.attrib['name']
 
-		m = loadmod(name)
+		m = loadmod(name, loop)
 
 	_log.debug('Modules loaded: ' + ', '.join(_mods.keys()))
 
 	for name in _mods:
-		m = _mods[name]
+		m = _mods[name]['object']
 		if m != None:
-			if hasattr(m, 'loadconfig'):
-				cfg = config.findall(name)
-				m.loadconfig(cfg, m)
+			cfg = config.findall(name)
+			m.readconfig(cfg)
 
 	return True
 
@@ -80,13 +99,11 @@ def applyconfig(loop):
 	global _mods
 
 	for name in _mods:
-		if hasattr(_mods[name], 'applyconfig'):
-			_log.debug('Applying configuration for module ' + name)
-			_mods[name].applyconfig(loop, _mods[name])
+		_log.debug('Applying configuration for module ' + name)
+		_mods[name]['object'].applyconfig()
 
 def shutdown(loop):
 	global _mods
 	for name in _mods:
-		if hasattr(_mods[name], 'shutdown'):
-			_log.debug('Shutting down module ' + name)
-			_mods[name].shutdown(loop)
+		_log.debug('Shutting down module ' + name)
+		_mods[name]['object'].shutdown()

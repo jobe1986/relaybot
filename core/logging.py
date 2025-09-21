@@ -71,7 +71,7 @@ class RBLogger(logging.Logger):
 
 confs = {'outputs': []}
 
-def loadconfig(conf, args):
+def readconfig(conf, args):
 	global confs, levels, _config
 
 	outs = conf.findall('output')

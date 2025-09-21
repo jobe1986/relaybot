@@ -37,13 +37,14 @@ TYPE_BOOL = 'bool'
 TYPE_FLOAT = 'float'
 
 def load(loop, args):
-	global config, configpath
+	global config, configpath, log
+
 	try:
 		log.info('Loading configuration from ' + configpath)
 
 		log.debug('Loading logging configuration')
 		logcfg = config.find('logging')
-		if _logging.loadconfig(logcfg, args):
+		if _logging.readconfig(logcfg, args):
 			_logging.applyconfig(loop, args)
 		else:
 			log.error('Unable to load logging configuration')
@@ -51,7 +52,7 @@ def load(loop, args):
 			return
 
 		log.debug('Loading modules')
-		if _modules.loadconfig(config):
+		if _modules.readconfig(config, loop):
 			loop.call_soon(_modules.applyconfig, loop)
 		else:
 			log.error('Unable to load modules')
@@ -67,7 +68,8 @@ def load(loop, args):
 		return
 
 def checkoverrides(args):
-	global config, configpath
+	global config, configpath, log
+
 	try:
 		configpath = os.path.abspath(args.config)
 		tree = ElementTree()
