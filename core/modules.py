@@ -48,7 +48,7 @@ class Module:
 # ModuleInstance class prototype
 class ModuleInstance:
 	def __init__(self, name, module):
-		self.loop = module.loop,
+		self.loop = module.loop
 		self.module = module # instance of Module class
 		self.name = name
 		self.log = _logging.log.getChild(self.__class__.__module__).getChildObj(name)

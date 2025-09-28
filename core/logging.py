@@ -196,10 +196,8 @@ def init_logging(args, configns):
 
 	if args.debug:
 		defloghandler.setLevel(LOG_DEBUG)
-		memloghandler.setLevel(LOG_DEBUG)
 	else:
 		defloghandler.setLevel(LOG_INFO)
-		memloghandler.setLevel(LOG_INFO)
 
 	root.setLevel(LOG_NOTSET)
 	log.setLevel(LOG_NOTSET)
