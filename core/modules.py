@@ -43,6 +43,14 @@ class Module:
 	def shutdown(self):
 		return
 
+def _applyconfigmod(mod):
+	_log.debug('Applying configuration for module ' + mod['name'])
+	mod['object'].applyconfig()
+
+def _shutdownmod(mod):
+	_log.debug('Shutting down module ' + mod['name'])
+	mod['object'].shutdown()
+
 def loadmod(name, loop):
 	global _mods
 
@@ -64,7 +72,7 @@ def loadmod(name, loop):
 		_log.error('Error loading module ' + name + ': ' + str(e))
 		return False
 
-	_mods[name] = {'module': m, 'object': o}
+	_mods[name] = {'name': name, 'module': m, 'object': o}
 	_log.debug('Loaded module ' + name)
 	return m
 
@@ -102,12 +110,10 @@ def applyconfig(loop):
 	global _mods
 
 	for name in _mods:
-		_log.debug('Applying configuration for module ' + name)
-		loop.call_soon(_mods[name]['object'].applyconfig)
+		loop.call_soon(_applyconfigmod, _mods[name])
 
 def shutdown(loop):
 	global _mods
 
 	for name in _mods:
-		_log.debug('Shutting down module ' + name)
-		loop.call_soon(_mods[name]['object'].shutdown)
+		loop.call_soon(_shutdownmod, _mods[name])
