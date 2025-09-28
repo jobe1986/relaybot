@@ -47,8 +47,8 @@ class Module:
 
 # ModuleInstance class prototype
 class ModuleInstance:
-	def __init__(self, name, loop, module):
-		self.loop = loop,
+	def __init__(self, name, module):
+		self.loop = module.loop,
 		self.module = module # instance of Module class
 		self.name = name
 		self.log = _logging.log.getChild(self.__class__.__module__).getChildObj(name)
@@ -150,14 +150,15 @@ def findinstance(mod, name):
 def registerinstance(inst):
 	global _modinstances
 
-	if not inst.module in _modinstances:
+	if not inst.module.name in _modinstances:
 		_modinstances[inst.module.name] = {}
 
 	if inst.name in _modinstances[inst.module.name]:
+		_log.debug('Unable to register module instance "' + inst.module.name + '#' + inst.name + '": an instance with that name already exists')
 		return False
 
 	_modinstances[inst.module.name][inst.name] = inst
-	_log.debug('Registered instance of module ' + inst.module.name + ' with name ' + inst.name)
+	_log.debug('Registered instance of module instance "' + inst.module.name + '#' + inst.name + '"')
 	return True
 
 # Unregister a module instance (instance of ModuleInstance class)
@@ -165,11 +166,13 @@ def unregisterinstance(inst):
 	global _modinstances
 
 	if not inst.module in _modinstances:
+		_log.debug('Unable to unregister module instance "' + inst.module.name + '#' + inst.name + '": no such module loaded')
 		return False
 
 	if not inst.name in _modinstances[inst.module.name]:
+		_log.debug('Unable to unregister module instance "' + inst.module.name + '#' + inst.name + '": no module instance with that name exists')
 		return False
 
 	del(_modinstances[inst.module.name][inst.name])
-	_log.debug('Unregistered instance of module ' + inst.module.name + ' with name ' + inst.name)
+	_log.debug('Unregistered module instance "' + inst.module.name + '#' + inst.name + '"')
 	return True
