@@ -25,12 +25,14 @@ import importlib
 _log = _logging.log.getChild(__name__)
 
 _mods = {}
+_modinstances = {}
 
 # Module class prototype
 class Module:
 	def __init__(self, loop, module):
 		self.loop = loop
-		self.module = module
+		self.module = module # raw module loaded by importlib
+		self.name = module.name
 		self.log = _logging.log.getChild(self.__class__.__module__)
 		return
 
@@ -43,15 +45,24 @@ class Module:
 	def shutdown(self):
 		return
 
+# ModuleInstance class prototype
+class ModuleInstance:
+	def __init__(self, name, loop, module):
+		self.loop = loop,
+		self.module = module # instance of Module class
+		self.name = name
+		self.log = _logging.log.getChild(self.__class__.__module__).getChildObj(name)
+		return
+
 def _applyconfigmod(mod):
-	_log.debug('Applying configuration for module ' + mod['name'])
-	mod['object'].applyconfig()
+	_log.debug('Applying configuration for module ' + mod.name)
+	mod.applyconfig()
 
 def _shutdownmod(mod):
-	_log.debug('Shutting down module ' + mod['name'])
-	mod['object'].shutdown()
+	_log.debug('Shutting down module ' + mod.name)
+	mod.shutdown()
 
-def loadmod(name, loop):
+def _loadmod(name, loop):
 	global _mods
 
 	if name in _mods:
@@ -72,10 +83,12 @@ def loadmod(name, loop):
 		_log.error('Error loading module ' + name + ': ' + str(e))
 		return False
 
-	_mods[name] = {'name': name, 'module': m, 'object': o}
+	_mods[name] = o
+	_modinstances[name] = {}
 	_log.debug('Loaded module ' + name)
 	return m
 
+# Read config load modules
 def readconfig(config, loop):
 	global _mods
 
@@ -87,33 +100,76 @@ def readconfig(config, loop):
 			continue
 		name = mod.attrib['name']
 
-		m = loadmod(name, loop)
+		m = _loadmod(name, loop)
 
 	_log.debug('Modules loaded: ' + ', '.join(_mods.keys()))
 
 	for name in _mods:
-		m = _mods[name]['object']
+		m = _mods[name]
 		if m != None:
 			cfg = config.findall(name)
 			m.readconfig(cfg)
 
 	return True
 
+# Find module by name
 def getmodule(name):
 	global _mods
 
 	if name in _mods:
-		return _mods[name]
+		return _mods[name]['object#']
 	return None
 
+# Loop through loaded modules and schedule task to apply their configs
 def applyconfig(loop):
 	global _mods
 
 	for name in _mods:
 		loop.call_soon(_applyconfigmod, _mods[name])
 
+# loop through loaded modules and schedule task to shut them down
 def shutdown(loop):
 	global _mods
 
 	for name in _mods:
 		loop.call_soon(_shutdownmod, _mods[name])
+
+# Find a module instance (instance of ModuleInstance class)
+def findinstance(mod, name):
+	global _modinstances
+
+	if not mod in _modinstances:
+		return None
+
+	if not name in _modinstances[mod]:
+		return None
+
+	return _modinstances[mod][name]
+
+# Register a module instance (instance of ModuleInstance class)
+def registerinstance(inst):
+	global _modinstances
+
+	if not inst.module in _modinstances:
+		_modinstances[inst.module.name] = {}
+
+	if inst.name in _modinstances[inst.module.name]:
+		return False
+
+	_modinstances[inst.module.name][inst.name] = inst
+	_log.debug('Registered instance of module ' + inst.module.name + ' with name ' + inst.name)
+	return True
+
+# Unregister a module instance (instance of ModuleInstance class)
+def unregisterinstance(inst):
+	global _modinstances
+
+	if not inst.module in _modinstances:
+		return False
+
+	if not inst.name in _modinstances[inst.module.name]:
+		return False
+
+	del(_modinstances[inst.module.name][inst.name])
+	_log.debug('Unregistered instance of module ' + inst.module.name + ' with name ' + inst.name)
+	return True
