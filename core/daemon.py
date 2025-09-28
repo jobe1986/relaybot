@@ -21,21 +21,21 @@
 
 import core.logging as _logging
 
-import os, sys, atexit
+import os, sys, atexit, resource
 
 log = _logging.log.getChild(__name__)
 
 def daemonize(args):
 	global log
-	try:
-		pf = open(args.pidfile,'r')
-		pid = int(pf.read().strip())
-		pf.close()
-	except:
-		pid = None
 
-	if pid and pid != os.getpid():
-		log.error('PID file already exists, Is RelayBot already running?')
+	pid = None
+	try:
+		with open(args.pidfile, 'r') as pf:
+			pid = int(pf.read().strip())
+	except (FileNotFoundError, ValueError):
+		pass
+	if pid and os.path.exists(f'/proc/{pid}'):
+		log.error('PID file exists and process is running. Is RelayBot already running?')
 		sys.exit(1)
 
 	if not args.nofork:
@@ -47,32 +47,46 @@ def daemonize(args):
 			if pid > 0:
 				sys.exit(0)
 		except Exception as e:
-			log.error('First fork failed: ' + str(estrerror))
+			log.error('First fork failed: ' + str(e))
 			sys.exit(1)
 
 		log.debug('Successfully forked once')
 
 		os.setsid()
-		
+
+		log.debug('Closing inherited file descriptors (FDs)')
+		try:
+			# Get the maximum file descriptor limit
+			maxfd = resource.getrlimit(resource.RLIMIT_NOFILE)[1]
+			if maxfd == resource.RLIM_INFINITY:
+				maxfd = 1024 
+			for fd in range(3, maxfd):
+				try:
+					os.close(fd)
+				except OSError:
+					pass
+		except Exception as e:
+			log.warning(f'Could not safely close FDs: {e}')
+
 		log.debug('Attempting second fork...')
 		try:
 			pid = os.fork()
 			if pid > 0:
 				sys.exit(0)
 		except Exception as e:
-			log.error('Second fork failed: ' + str(estrerror))
+			log.error('Second fork failed: ' + str(e))
 			sys.exit(1)
 
 		log.debug('Successfully forked into the background')
 
 		sys.stdout.flush()
 		sys.stderr.flush()
-		si = open(os.devnull, 'r')
-		so = open(os.devnull, 'a+')
-		se = open(os.devnull, 'a+')
-		os.dup2(si.fileno(), sys.stdin.fileno())
-		os.dup2(so.fileno(), sys.stdout.fileno())
-		os.dup2(se.fileno(), sys.stderr.fileno())
+		with open(os.devnull, 'r') as si:
+			os.dup2(si.fileno(), sys.stdin.fileno())
+		with open(os.devnull, 'a+') as so:
+			os.dup2(so.fileno(), sys.stdout.fileno())
+		with open(os.devnull, 'a+') as se:
+			os.dup2(se.fileno(), sys.stderr.fileno())
 	else:
 		log.debug('Running in the foreground')
 
@@ -80,12 +94,11 @@ def daemonize(args):
 	atexit.register(delpidfile, args.pidfile)
 	pid = str(os.getpid())
 	try:
-		pf = open(args.pidfile, 'w+')
-		pf.write('%s\n' % (pid))
-		pf.close()
-	except:
-		log.error('Could not create PID file')
-		sys.exit(0)
+		with open(args.pidfile, 'w') as pf:
+			pf.write(str(pid) + '\n')
+	except IOError as e:
+		log.error('Could not create PID file: ' + str(e))
+		sys.exit(1)
 
 	return
 

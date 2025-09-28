@@ -29,6 +29,9 @@ _mods = {}
 # Module class prototype
 class Module:
 	def __init__(self, loop, module):
+		self.loop = loop
+		self.module = module
+		self.log = _logging.log.getChild(self.__class__.__module__)
 		return
 
 	def readconfig(self, config):

@@ -25,6 +25,8 @@ import core.config as _config
 import core.daemon as _daemon
 import core.signals as _signals
 
+from core.loop import init_loop, shutdown_loop
+
 import argparse, asyncio, os, sys
 
 log = _logging.log.getChild('main')
@@ -58,9 +60,7 @@ log.debug('Command line options: ' + str(vars(args)))
 _daemon.daemonize(args)
 
 # Create event loop
-loop = asyncio.get_event_loop()
-if args.asynciodebug:
-	loop.set_debug(True)
+loop = init_loop(args)
 
 _signals.init_signals(loop)
 
@@ -73,5 +73,11 @@ try:
 	loop.run_forever()
 except KeyboardInterrupt:
 	log.info('Shutting down: Keyboard interrupt')
-
-loop.close()
+	loop.create_task(shutdown_loop(loop))
+	loop.run_forever() # Run to process the shutdown_app task
+finally:
+	log.info('Finalizing tasks')
+	pending_tasks = asyncio.all_tasks(loop=loop)
+	if pending_tasks:
+		loop.run_until_complete(asyncio.gather(*pending_tasks, return_exceptions=True))
+	loop.close()

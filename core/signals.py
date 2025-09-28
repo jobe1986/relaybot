@@ -22,6 +22,8 @@
 import core.logging as _logging
 import core.modules as _modules
 
+from core.loop import shutdown_loop
+
 import os, signal
 
 log = _logging.log.getChild(__name__)
@@ -29,7 +31,8 @@ log = _logging.log.getChild(__name__)
 def handle_sigint(loop):
 	log.info('Shutting down: Received signal SIGINT')
 	_modules.shutdown(loop)
-	loop.call_later(2, loop.stop)
+	loop.create_task(shutdown_loop(loop))
+	loop.stop()
 
 def handle_sighup(loop):
 	log.info('Received signal SIGHUP')
@@ -43,7 +46,8 @@ def handle_sigusr2(loop):
 def handle_sigterm(loop):
 	log.info('Shutting down: Received signal SIGTERM')
 	_modules.shutdown(loop)
-	loop.call_later(2, loop.stop)
+	loop.create_task(shutdown_loop(loop))
+	loop.stop()
 
 def init_signals(loop):
 	if not os.name == 'nt':
