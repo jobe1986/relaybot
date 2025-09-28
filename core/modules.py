@@ -37,13 +37,13 @@ class Module:
 		return
 
 	def readconfig(self, config):
-		return
+		pass
 
 	def applyconfig(self):
-		return
+		pass
 
 	def shutdown(self):
-		return
+		pass
 
 # ModuleInstance class prototype
 class ModuleInstance:
@@ -53,6 +53,12 @@ class ModuleInstance:
 		self.name = name
 		self.log = _logging.log.getChild(self.__class__.__module__).getChildObj(name)
 		return
+
+	def startup():
+		pass
+
+	def shutdown():
+		pass
 
 def _applyconfigmod(mod):
 	_log.debug('Applying configuration for module ' + mod.name)
@@ -145,6 +151,15 @@ def findinstance(mod, name):
 		return None
 
 	return _modinstances[mod][name]
+
+# Get a list of all module instances for a specified module
+def getinstances(mod):
+	global _modinstances
+
+	if not mod in _modinstances:
+		return []
+
+	return list(_modinstances[mod].values())
 
 # Register a module instance (instance of ModuleInstance class)
 def registerinstance(inst):
