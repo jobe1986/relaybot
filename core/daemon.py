@@ -68,6 +68,8 @@ def daemonize(args):
 		except Exception as e:
 			log.warning(f'Could not safely close FDs: {e}')
 
+		_logging.remove_defloghandler()
+
 		log.debug('Attempting second fork...')
 		try:
 			pid = os.fork()

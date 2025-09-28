@@ -47,6 +47,12 @@ log = logging.getLogger('relaybot')
 _log = log.getChild(__name__)
 
 _config = None
+cliargs = None
+deflogformatter = None
+defloghandler = None
+memloghandler = None
+
+confs = {'outputs': []}
 
 def leveltoname(level):
 	global levels
@@ -69,7 +75,13 @@ class RBLogger(logging.Logger):
 			suffix = '#'.join((self.name, suffix))
 		return self.manager.getLogger(suffix)
 
-confs = {'outputs': []}
+class RBMemoryHandler(logging.handlers.MemoryHandler):
+	def __init__(self, target=None):
+		# we're overriding the use of capacity and flushlevel so this __init__ doesnt need them
+		super().__init__(capacity=1000, flushLevel=logging.ERROR, target=target)
+
+	def shouldFlush(self, record):
+		return False
 
 def readconfig(conf, args):
 	global confs, levels, _config
@@ -112,9 +124,11 @@ def readconfig(conf, args):
 	return True
 
 def applyconfig(loop, args):
-	global confs, root, defloghandler, deflogformatter, cliargs
+	global confs, root, defloghandler, deflogformatter, cliargs, memloghandler
 
 	removedef = False
+	
+	conhandlers = []
 
 	for out in confs['outputs']:
 		if out['type'] == 'stdout':
@@ -144,15 +158,27 @@ def applyconfig(loop, args):
 		logformatter = UTCFormatter('[%(asctime)s] [%(name)s/%(levelname)s] %(message)s', '%Y-%m-%d %H:%M:%S')
 		loghandler.setFormatter(logformatter)
 		loghandler.setLevel(out['level'])
-		root.addHandler(loghandler)
+		if out['type'] in ['stdout', 'stderr']:
+			conhandlers.append(loghandler)
+		else:
+			root.addHandler(loghandler)
 		removedef = True
 
-	if removedef:
-		root.removeHandler(defloghandler)
-		_log.debug('Default logging handler no longer needed')
+	if removedef and defloghandler is not None:
+		remove_defloghandler()
+
+	if memloghandler:
+		root.removeHandler(memloghandler)
+		memloghandler.setTarget(root)
+		memloghandler.flush()
+		memloghandler.setTarget(None)
+		memloghandler = None
+
+	for loghandler in conhandlers:
+		root.addHandler(loghandler)
 
 def init_logging(args, configns):
-	global rblog, levels, root, defloghandler, deflogformatter, cliargs, _config
+	global levels, root, defloghandler, deflogformatter, cliargs, _config, memloghandler
 	_config = configns
 
 	cliargs = args
@@ -166,17 +192,33 @@ def init_logging(args, configns):
 	deflogformatter = UTCFormatter('[%(asctime)s] [%(name)s/%(levelname)s] %(message)s', '%Y-%m-%d %H:%M:%S')
 	defloghandler.setFormatter(deflogformatter)
 
+	memloghandler = RBMemoryHandler(target=None)
+
 	if args.debug:
 		defloghandler.setLevel(LOG_DEBUG)
+		memloghandler.setLevel(LOG_DEBUG)
 	else:
 		defloghandler.setLevel(LOG_INFO)
+		memloghandler.setLevel(LOG_INFO)
 
 	root.setLevel(LOG_NOTSET)
 	log.setLevel(LOG_NOTSET)
 	root.addHandler(defloghandler)
+	root.addHandler(memloghandler)
 
 	if args.debug:
 		log.debug('Debug logging enabled')
+
+def remove_defloghandler():
+	global root, defloghandler
+
+	if defloghandler is None:
+		return
+
+	defloghandler.flush()
+
+	root.removeHandler(defloghandler)
+	defloghandler = None
 
 def getlog(name):
 	return log.getChild(name)
