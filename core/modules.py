@@ -103,10 +103,11 @@ def applyconfig(loop):
 
 	for name in _mods:
 		_log.debug('Applying configuration for module ' + name)
-		_mods[name]['object'].applyconfig()
+		loop.call_soon(_mods[name]['object'].applyconfig)
 
 def shutdown(loop):
 	global _mods
+
 	for name in _mods:
 		_log.debug('Shutting down module ' + name)
-		_mods[name]['object'].shutdown()
+		loop.call_soon(_mods[name]['object'].shutdown)
