@@ -24,7 +24,7 @@ from xml.etree.ElementTree import ElementTree
 import core.logging as _logging
 import core.modules as _modules
 
-import os
+import os, sys
 
 log = _logging.log.getChild(__name__)
 
@@ -48,24 +48,21 @@ def load(loop, args):
 			_logging.applyconfig(loop, args)
 		else:
 			log.error('Unable to load logging configuration')
-			loop.stop()
-			return
+			sys.exit(1)
 
 		log.debug('Loading modules')
 		if _modules.readconfig(config, loop):
 			loop.call_soon(_modules.applyconfig, loop)
 		else:
 			log.error('Unable to load modules')
-			loop.stop()
-			return
+			sys.exit(1)
 
 		log.info('Configuration successfully loaded')
 
 		return
 	except Exception as e:
 		log.error('Error parsing configuration: ' + str(e))
-		loop.stop()
-		return
+		sys.exit(1)
 
 def checkoverrides(args):
 	global config, configpath, log

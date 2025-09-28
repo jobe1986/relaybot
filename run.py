@@ -64,8 +64,8 @@ loop = init_loop(args)
 
 _signals.init_signals(loop)
 
-# Begin by loading config when we start the loop
-loop.call_soon(_config.load, loop, args)
+# Load the config, this will start adding tasks etc... to the loop ready to be run by loop.run_forever()
+_config.load(loop, args)
 
 log.info('Starting event loop')
 
