@@ -54,11 +54,15 @@ class ModuleInstance:
 		self.log = _logging.log.getChild(self.__class__.__module__).getChildObj(name)
 		return
 
-	def startup():
+	def startup(self):
 		pass
 
-	def shutdown():
+	def shutdown(self):
 		pass
+
+	@property
+	def identifier(self):
+		return self.module.name + '#' + self.name
 
 def _applyconfigmod(mod):
 	_log.debug('Applying configuration for module ' + mod.name)
@@ -92,7 +96,7 @@ def _loadmod(name, loop):
 	_mods[name] = o
 	_modinstances[name] = {}
 	_log.debug('Loaded module ' + name)
-	return m
+	return o
 
 # Read config load modules
 def readconfig(config, loop):
@@ -123,7 +127,7 @@ def getmodule(name):
 	global _mods
 
 	if name in _mods:
-		return _mods[name]['object#']
+		return _mods[name]
 	return None
 
 # Loop through loaded modules and schedule task to apply their configs
@@ -169,11 +173,11 @@ def registerinstance(inst):
 		_modinstances[inst.module.name] = {}
 
 	if inst.name in _modinstances[inst.module.name]:
-		_log.debug('Unable to register module instance "' + inst.module.name + '#' + inst.name + '": an instance with that name already exists')
+		_log.debug('Unable to register module instance "' + inst.identifier + '": an instance with that name already exists')
 		return False
 
 	_modinstances[inst.module.name][inst.name] = inst
-	_log.debug('Registered instance of module instance "' + inst.module.name + '#' + inst.name + '"')
+	_log.debug('Registered module instance "' + inst.identifier + '"')
 	return True
 
 # Unregister a module instance (instance of ModuleInstance class)
@@ -181,13 +185,13 @@ def unregisterinstance(inst):
 	global _modinstances
 
 	if not inst.module in _modinstances:
-		_log.debug('Unable to unregister module instance "' + inst.module.name + '#' + inst.name + '": no such module loaded')
+		_log.debug('Unable to unregister module instance "' + inst.identifier + '": no such module loaded')
 		return False
 
 	if not inst.name in _modinstances[inst.module.name]:
-		_log.debug('Unable to unregister module instance "' + inst.module.name + '#' + inst.name + '": no module instance with that name exists')
+		_log.debug('Unable to unregister module instance "' + inst.identifier + '": no module instance with that name exists')
 		return False
 
 	del(_modinstances[inst.module.name][inst.name])
-	_log.debug('Unregistered module instance "' + inst.module.name + '#' + inst.name + '"')
+	_log.debug('Unregistered module instance "' + inst.identifier + '"')
 	return True
