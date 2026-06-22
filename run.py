@@ -58,7 +58,8 @@ log.debug('Command line options: ' + str(vars(args)))
 _daemon.daemonize(args)
 
 # Create event loop
-loop = asyncio.get_event_loop()
+loop = asyncio.new_event_loop()
+asyncio.set_event_loop(loop)
 if args.asynciodebug:
 	loop.set_debug(True)
 
