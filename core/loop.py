@@ -43,6 +43,8 @@ async def shutdown_loop(loop):
 
 	_log.info('Starting graceful shutdown...')
 
+	current_task = asyncio.current_task()
+
 	# Get all pending tasks (excluding the one running this shutdown code)
 	tasks = []
 	for t in asyncio.all_tasks(loop=loop):
@@ -50,7 +52,9 @@ async def shutdown_loop(loop):
 		if t is not current_task:
 			tasks.append(t)
 
+	_log.debug('Cancelling ' + str(len(tasks)) + ' tasks')
 	for task in tasks:
+		_log.debug('Cancelling task: ' + str(task))
 		task.cancel()
 
 	try:

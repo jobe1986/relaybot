@@ -71,13 +71,18 @@ log.info('Starting event loop')
 
 try:
 	loop.run_forever()
-except KeyboardInterrupt:
-	log.info('Shutting down: Keyboard interrupt')
-	loop.create_task(shutdown_loop(loop))
-	loop.run_forever() # Run to process the shutdown_app task
+except Exception as e:
+	log.error('Loop error: ' + str(e))
 finally:
 	log.info('Finalizing tasks')
+
+	loop.run_until_complete(shutdown_loop(loop))
+
 	pending_tasks = asyncio.all_tasks(loop=loop)
 	if pending_tasks:
+		log.debug('Cancelling ' + str(len(pending_tasks)) + ' tasks')
+		for t in pending_tasks:
+			log.debug('Cancelling task ' + str(t))
+			t.cancel()
 		loop.run_until_complete(asyncio.gather(*pending_tasks, return_exceptions=True))
 	loop.close()
