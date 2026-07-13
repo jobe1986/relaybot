@@ -2,7 +2,7 @@
 
 # RelayBot - Simple Relay Service, core/signals.py
 #
-# Copyright (C) 2025 Matthew Beeching
+# Copyright (C) 2026 Matthew Beeching
 #
 # This file is part of RelayBot.
 #
