@@ -71,6 +71,11 @@ log.info('Starting event loop')
 
 try:
 	loop.run_forever()
+except KeyboardInterrupt:
+	log.info('Shutting down: Keyboard interrupt')
+	_modules.shutdown(loop)
+	loop.call_soon_threadsafe(shutdown_sequence, loop)
+	loop.run_forever()
 except Exception as e:
 	log.error('Loop error: ' + str(e))
 finally:
