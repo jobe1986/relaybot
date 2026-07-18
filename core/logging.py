@@ -127,7 +127,7 @@ def applyconfig(loop, args):
 	global confs, root, defloghandler, deflogformatter, cliargs, memloghandler
 
 	removedef = False
-	
+
 	conhandlers = []
 
 	for out in confs['outputs']:
