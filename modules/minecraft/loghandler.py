@@ -47,8 +47,8 @@ class LogHandler:
 		self.msgre = {
 			'Server thread': {
 				'PLAYER_IP': [re.compile('^(?P<name>.+?)\\[/(?P<ip>.+?):(?P<port>[0-9]+?)\\] logged in with entity id.*?$')],
-				'PLAYER_CONNECT': [re.compile('^(?P<name>.+?) (?P<message>(?:\\(formerly known as .+?\\) )?joined the game)$')],
-				'PLAYER_DISCONNECT': [re.compile('^(?P<name>.+?) (?P<message>(?:\\(formerly known as .+?\\) )?left the game)$')],
+				'PLAYER_CONNECT': [re.compile('^(?:System chat: )?(?P<name>.+?) (?P<message>(?:\\(formerly known as .+?\\) )?joined the game)$')],
+				'PLAYER_DISCONNECT': [re.compile('^(?:System chat: )?(?P<name>.+?) (?P<message>(?:\\(formerly known as .+?\\) )?left the game)$')],
 				'WHITELIST_FAIL': [
 					re.compile('^(?P<name>.+?) \\(/(?P<ip>.+?):(?P<port>[0-9]+?)\\) lost connection: You are not white-listed on this server!$'),
 					],
